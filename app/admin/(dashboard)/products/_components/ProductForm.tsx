@@ -62,7 +62,7 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
               required
               maxLength={255}
               defaultValue={product?.name || ''}
-              placeholder="e.g. Turmeric Powder"
+              placeholder="e.g. Premium Front Open Abaya"
               className="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-white text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-all duration-200"
             />
             <p className="text-xs text-stone-400 mt-1.5">

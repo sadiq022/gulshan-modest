@@ -41,8 +41,10 @@ export async function createProduct(
   }
 
   const slug = slugify(name)
+  const id = crypto.randomUUID()
 
   const { data: product, error } = await supabase.from('products').insert({
+    id,
     name,
     slug,
     category_id: categoryId || null,

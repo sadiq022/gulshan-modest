@@ -37,6 +37,7 @@ export async function createCategory(
   const slug = slugify(name)
 
   const { error } = await supabase.from('categories').insert({
+    id: slug,
     name,
     slug,
     description: description || null,
