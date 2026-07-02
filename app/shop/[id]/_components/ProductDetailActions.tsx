@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react'
 import { useCart } from '@/context/CartContext'
+import { useRouter } from 'next/navigation'
 import { SITE } from '@/lib/data'
-import { ShoppingBag, MessageSquare, Plus, Minus } from 'lucide-react'
+import { ShoppingBag, CreditCard, Plus, Minus } from 'lucide-react'
 
 export type ProductVariant = {
   id: string
@@ -23,6 +24,7 @@ type ProductItem = {
 
 export default function ProductDetailActions({ product }: { product: ProductItem }) {
   const { addToCart, updateQuantity, cart } = useCart()
+  const router = useRouter()
   const [quantity, setQuantity] = useState(1)
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
     product.variants.length > 0 ? product.variants[0] : null
@@ -62,45 +64,71 @@ export default function ProductDetailActions({ product }: { product: ProductItem
     alert(`${quantity} × ${product.name} added to cart successfully!`)
   }
 
-  const getWhatsappLink = () => {
-    const variantText = selectedVariant ? ` (Variant: ${selectedVariant.variant_name})` : ''
-    return `https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent(
-      `Hi! I'm interested in purchasing the ${product.name}${variantText} (Qty: ${quantity}). Please provide details.`
-    )}`
+  const handleBuyNow = () => {
+    handleAdd()
+    router.push('/checkout')
   }
 
   return (
     <div className="space-y-6">
       
-      {/* Dynamic Price Display */}
-      <div className="flex items-baseline gap-3 pt-3 border-t border-cream-line/50">
-        <span className="font-display font-bold text-3xl text-emerald">
-          ₹{currentPrice.toLocaleString('en-IN')}
-        </span>
-        {currentOldPrice && (
-          <span className="text-ink/40 text-lg line-through">
-            ₹{currentOldPrice.toLocaleString('en-IN')}
+      {/* Dynamic Price & Quantity Display */}
+      <div className="flex items-center justify-between pt-3 border-t border-cream-line/50">
+        <div className="flex items-baseline gap-3">
+          <span className="font-display font-bold text-3xl text-emerald">
+            ₹{currentPrice.toLocaleString('en-IN')}
           </span>
-        )}
+          {currentOldPrice && (
+            <span className="text-ink/40 text-lg line-through">
+              ₹{currentOldPrice.toLocaleString('en-IN')}
+            </span>
+          )}
+        </div>
+        
+        {/* Quantity control */}
+        <div className="flex items-center border border-cream-line bg-white rounded-full p-1 shadow-sm">
+          <button
+            onClick={() => setQuantity(q => Math.max(1, q - 1))}
+            className="p-1.5 hover:text-emerald text-ink/60 transition-colors rounded-full hover:bg-cream"
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+          <span className="px-4 font-semibold text-ink text-sm">{quantity}</span>
+          <button
+            onClick={() => setQuantity(q => q + 1)}
+            className="p-1.5 hover:text-emerald text-ink/60 transition-colors rounded-full hover:bg-cream"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Variant Selector */}
       {product.variants.length > 0 && (
-        <div className="space-y-3">
-          <span className="text-sm font-semibold text-ink">Select Variant/Size:</span>
-          <div className="flex flex-wrap gap-2">
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <span className="text-[13px] uppercase tracking-wider font-bold text-ink/70">Select Size / Variant</span>
+            {selectedVariant && (
+              <span className="text-xs font-semibold text-emerald">{selectedVariant.stock_quantity > 0 ? "In Stock" : "Out of Stock"}</span>
+            )}
+          </div>
+          
+          <div className="flex flex-wrap gap-3">
             {product.variants.map(variant => (
               <button
                 key={variant.id}
                 onClick={() => setSelectedVariant(variant)}
                 disabled={variant.stock_quantity <= 0}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-all duration-200 ${
+                className={`relative min-w-[3.5rem] h-12 px-4 rounded-xl text-[15px] font-bold flex items-center justify-center transition-all duration-300 border-2 overflow-hidden ${
                   selectedVariant?.id === variant.id
-                    ? "border-emerald bg-emerald text-cream"
-                    : "border-cream-line text-ink/70 hover:border-emerald/50 hover:bg-emerald/5"
-                } ${variant.stock_quantity <= 0 ? "opacity-50 cursor-not-allowed bg-cream/50 line-through" : ""}`}
+                    ? "border-emerald text-emerald bg-emerald/5 shadow-sm scale-[1.02]"
+                    : "border-cream-line text-ink/80 hover:border-emerald/40 hover:bg-emerald/5 hover:text-emerald"
+                } ${variant.stock_quantity <= 0 ? "opacity-40 cursor-not-allowed bg-cream-deep text-ink/40 border-cream-line line-through" : ""}`}
               >
                 {variant.variant_name}
+                {selectedVariant?.id === variant.id && (
+                  <div className="absolute top-0 right-0 w-3 h-3 bg-emerald rounded-bl-xl" />
+                )}
               </button>
             ))}
           </div>
@@ -109,31 +137,14 @@ export default function ProductDetailActions({ product }: { product: ProductItem
 
       {/* Actions */}
       <div className="space-y-4 pt-4 border-t border-cream-line/50">
-        <div className="flex flex-wrap items-center gap-4">
-          {/* Quantity control */}
-          <div className="flex items-center border border-cream-line bg-white rounded-full p-1 shadow-sm">
-            <button
-              onClick={() => setQuantity(q => Math.max(1, q - 1))}
-              className="p-1.5 hover:text-emerald text-ink/60 transition-colors rounded-full hover:bg-cream"
-            >
-              <Minus className="w-4 h-4" />
-            </button>
-            <span className="px-4 font-semibold text-ink text-sm">{quantity}</span>
-            <button
-              onClick={() => setQuantity(q => q + 1)}
-              className="p-1.5 hover:text-emerald text-ink/60 transition-colors rounded-full hover:bg-cream"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Info text if in cart */}
-          {currentQty > 0 && (
+        {/* Info text if in cart */}
+        {currentQty > 0 && (
+          <div className="flex">
             <span className="text-xs font-semibold text-emerald bg-emerald/5 border border-emerald/10 px-3 py-1.5 rounded-full">
               {currentQty} currently in your cart
             </span>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
           <button
@@ -144,14 +155,13 @@ export default function ProductDetailActions({ product }: { product: ProductItem
             <ShoppingBag className="w-5 h-5" /> Add to Cart
           </button>
 
-          <a
-            href={getWhatsappLink()}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full py-3.5 px-4 border-2 border-emerald text-emerald font-body font-semibold rounded-full hover:bg-emerald hover:text-cream transition-all duration-200 flex items-center justify-center gap-2"
+          <button
+            onClick={handleBuyNow}
+            disabled={product.variants.length > 0 && !selectedVariant}
+            className="w-full py-3.5 px-4 border-2 border-emerald text-emerald font-body font-semibold rounded-full hover:bg-emerald hover:text-cream transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <MessageSquare className="w-5 h-5" /> Enquire on WhatsApp
-          </a>
+            <CreditCard className="w-5 h-5" /> Buy Now
+          </button>
         </div>
       </div>
     </div>

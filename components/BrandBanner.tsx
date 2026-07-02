@@ -7,7 +7,7 @@ export default function BrandBanner() {
       className="relative overflow-hidden pt-12 md:pt-16 pb-12 md:pb-16 border-y border-gold/10 min-h-[450px] flex items-center"
       style={{ backgroundImage: "linear-gradient(135deg, #FDFBF7 0%, #F5ECE0 60%, #E6DAC4 100%)" }}
     >
-      <div className="max-w-[1400px] mx-auto px-5 md:px-8 w-full relative z-10">
+      <div className="max-w-wrap mx-auto px-5 md:px-8 w-full relative z-10">
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           
           {/* Left Column: Brand Content and CTA (Centered) */}

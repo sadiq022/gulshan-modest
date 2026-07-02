@@ -33,6 +33,7 @@ export async function createProduct(
   const stitching = formData.get('stitching') as string
   const seoTitle = formData.get('seo_title') as string
   const seoDescription = formData.get('seo_description') as string
+  const badge = formData.get('badge') as string
   const isActive = formData.get('is_active') === 'on'
   const isFeatured = formData.get('is_featured') === 'on'
 
@@ -54,6 +55,7 @@ export async function createProduct(
     stitching: stitching || null,
     seo_title: seoTitle || null,
     seo_description: seoDescription || null,
+    badge: badge || null,
     is_active: isActive,
     is_featured: isFeatured,
   }).select('id').single()
@@ -84,6 +86,7 @@ export async function updateProduct(
   const stitching = formData.get('stitching') as string
   const seoTitle = formData.get('seo_title') as string
   const seoDescription = formData.get('seo_description') as string
+  const badge = formData.get('badge') as string
   const isActive = formData.get('is_active') === 'on'
   const isFeatured = formData.get('is_featured') === 'on'
 
@@ -105,6 +108,7 @@ export async function updateProduct(
       stitching: stitching || null,
       seo_title: seoTitle || null,
       seo_description: seoDescription || null,
+      badge: badge || null,
       is_active: isActive,
       is_featured: isFeatured,
     })

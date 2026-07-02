@@ -2,6 +2,7 @@ import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import ShopGrid from './_components/ShopGrid'
 import { createClient } from "@/lib/supabase/server";
+import Image from 'next/image'
 
 export const metadata = {
   title: 'Shop Collection | Gulshan Modest',
@@ -42,25 +43,42 @@ export default async function ShopPage({
   }));
 
   const categories = categoriesData || [];
-  const selectedCategory = searchParams.category || ''
+  // In Next.js 15+, searchParams is a promise
+  const resolvedSearchParams = await searchParams;
+  const selectedCategory = resolvedSearchParams.category || ''
 
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-cream pt-28 pb-16 md:pt-36 md:pb-24">
-        <div className="max-w-[1400px] mx-auto px-5 md:px-8">
+      <main className="min-h-screen bg-cream pt-[72px] md:pt-[84px]">
+        
+        {/* Shop Hero Banner */}
+        <section className="relative w-full h-[250px] md:h-[340px] bg-emerald-deep flex items-center justify-center overflow-hidden border-b border-cream-line">
+          <Image
+            src="/shop-banner.png"
+            alt="Gulshan Modest Fashion Collection"
+            fill
+            className="object-cover opacity-80 mix-blend-luminosity"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-tr from-ink/90 via-emerald-deep/60 to-ink/90" />
           
-          <div className="text-center max-w-xl mx-auto mb-10">
-            <div className="eyebrow justify-center inline-flex items-center gap-2">
+          <div className="relative z-10 text-center px-5">
+            <div className="eyebrow justify-center inline-flex items-center gap-2 mb-3 text-gold-light">
               <span className="h-px w-6 bg-gold" />
               Complete Collection
               <span className="h-px w-6 bg-gold" />
             </div>
-            <h1 className="section-heading mt-3">Shop the drop</h1>
-            <p className="section-sub mt-2">
-              Timeless silhouettes designed with maximum drape, elegance, and comfort in premium breathable fabrics.
+            <h1 className="font-display font-bold text-3xl md:text-5xl text-cream tracking-wide">
+              Shop the Drop
+            </h1>
+            <p className="mt-4 text-cream/70 font-body text-sm md:text-base max-w-lg mx-auto">
+              Timeless silhouettes designed with maximum drape, elegance, and comfort.
             </p>
           </div>
+        </section>
+
+        <div className="max-w-[1400px] mx-auto px-5 md:px-8 py-10 md:py-16">
 
           <ShopGrid 
             initialProducts={products} 

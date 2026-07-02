@@ -57,6 +57,7 @@ export interface Product {
   short_description: string | null
   description: string | null
   featured_image_url: string | null
+  badge: string | null
   average_rating: number
   review_count: number
   is_active: boolean

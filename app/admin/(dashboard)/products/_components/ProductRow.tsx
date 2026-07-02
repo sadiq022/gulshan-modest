@@ -12,6 +12,7 @@ interface ProductWithCategory {
   short_description: string | null
   featured_image_url?: string | null
   image_url?: string | null
+  badge?: string | null
   is_active: boolean
   created_at: string
   categories: { name: string } | null
@@ -57,6 +58,15 @@ export default function ProductRow({
           </span>
         ) : (
           <span className="text-xs text-stone-400 italic">Uncategorized</span>
+        )}
+      </td>
+      <td className="px-6 py-3.5">
+        {product.badge ? (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+            {product.badge}
+          </span>
+        ) : (
+          <span className="text-xs text-stone-400 italic">None</span>
         )}
       </td>
       <td className="px-6 py-3.5">

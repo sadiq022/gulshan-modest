@@ -7,7 +7,8 @@ export default function Footer() {
     <footer className="relative bg-emerald-deep pt-4">
       <BotanicalDivider tone="gold" />
       <div className="max-w-wrap mx-auto px-5 md:px-8 pb-10 pt-8">
-        <div className="grid md:grid-cols-[1.3fr_1fr_1fr] gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1.2fr_1fr] gap-10 lg:gap-8">
+          {/* Column 1: Brand Info */}
           <div>
             <div className="flex items-center gap-2.5">
               <Image
@@ -27,6 +28,7 @@ export default function Footer() {
             </p>
           </div>
 
+          {/* Column 2: Explore */}
           <div>
             <h4 className="font-display font-semibold text-cream text-sm tracking-wide uppercase">
               Explore
@@ -42,9 +44,44 @@ export default function Footer() {
                   </a>
                 </li>
               ))}
+              <li>
+                <a href="/about" className="text-cream/65 text-sm hover:text-gold-light transition-colors">
+                  About Us
+                </a>
+              </li>
             </ul>
           </div>
 
+          {/* Column 3: Legal & Policies */}
+          <div>
+            <h4 className="font-display font-semibold text-cream text-sm tracking-wide uppercase">
+              Legal & Policies
+            </h4>
+            <ul className="mt-4 space-y-2.5">
+              <li>
+                <a href="/policies/privacy" className="text-cream/65 text-sm hover:text-gold-light transition-colors">
+                  Privacy Policy
+                </a>
+              </li>
+              <li>
+                <a href="/policies/terms" className="text-cream/65 text-sm hover:text-gold-light transition-colors">
+                  Terms & Conditions
+                </a>
+              </li>
+              <li>
+                <a href="/policies/refund" className="text-cream/65 text-sm hover:text-gold-light transition-colors">
+                  Refund & Cancellation
+                </a>
+              </li>
+              <li>
+                <a href="/policies/shipping" className="text-cream/65 text-sm hover:text-gold-light transition-colors">
+                  Shipping & Delivery
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Column 4: Contact */}
           <div>
             <h4 className="font-display font-semibold text-cream text-sm tracking-wide uppercase">
               Contact

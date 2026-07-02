@@ -12,7 +12,7 @@ interface Category {
 export default function Categories({ categories = [] }: { categories?: Category[] }) {
 
   return (
-    <section id="categories" className="relative py-20 md:py-28 bg-cream-deep/60">
+    <section id="categories" className="relative py-12 md:py-16 bg-cream-deep/60">
       <div className="max-w-wrap mx-auto px-5 md:px-8">
         <Reveal className="text-center max-w-xl mx-auto">
           <div className="eyebrow justify-center inline-flex items-center gap-2">
@@ -43,15 +43,12 @@ export default function Categories({ categories = [] }: { categories?: Category[
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/10 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-4 md:p-5">
-                  <span className="inline-block text-[10px] md:text-xs font-semibold tracking-widest uppercase text-gold-light/90 mb-1">
+                  <span className="inline-block text-[10px] md:text-xs font-semibold tracking-widest uppercase bg-gold text-cream px-2.5 py-0.5 rounded-full mb-1.5 shadow-sm">
                     {cat.count}
                   </span>
                   <h3 className="font-display font-semibold text-cream text-base md:text-xl leading-tight">
                     {cat.name}
                   </h3>
-                  <p className="hidden md:block text-cream/75 text-[13px] mt-1 leading-snug">
-                    {cat.description}
-                  </p>
                 </div>
               </a>
             </Reveal>

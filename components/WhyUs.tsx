@@ -34,7 +34,7 @@ const cardColors = [
 
 export default function WhyUs() {
   return (
-    <section className="relative py-20 md:py-28 bg-gradient-to-br from-[#122A1E] via-[#0E2017] to-[#0A1610] overflow-hidden">
+    <section className="relative py-12 md:py-16 bg-gradient-to-br from-[#122A1E] via-[#0E2017] to-[#0A1610] overflow-hidden">
       <div className="pointer-events-none absolute -bottom-24 -left-24 w-[420px] h-[420px] rounded-full bg-emerald-soft/20 blur-3xl" />
       <div className="pointer-events-none absolute -top-20 right-0 w-[360px] h-[360px] rounded-full bg-gold/5 blur-3xl" />
 

@@ -50,14 +50,14 @@ export default function Hero({ slides = [] }: { slides?: Slide[] }) {
   return (
     <section
       id="home"
-      className="relative overflow-hidden pt-[120px] md:pt-[150px] pb-16 md:pb-24 bg-[#FCF8F2]"
+      className="relative overflow-hidden pt-[72px] md:pt-[84px] pb-16 md:pb-24 bg-[#FCF8F2]"
     >
 
       {/* ambient gradient blobs */}
       <div className="pointer-events-none absolute -top-32 -right-32 w-[480px] h-[480px] rounded-full bg-gradient-to-br from-gold-pale via-gold-light/40 to-transparent blur-3xl opacity-50 z-0" />
       <div className="pointer-events-none absolute top-1/3 -left-40 w-[420px] h-[420px] rounded-full bg-gradient-to-tr from-rose-soft/30 via-cream to-transparent blur-3xl opacity-55 z-0" />
 
-      <div className="max-w-[1400px] mx-auto px-5 md:px-8 relative z-10 w-full min-h-[580px] flex items-center justify-center">
+      <div className="max-w-wrap mx-auto px-5 md:px-8 relative z-10 w-full min-h-[580px] flex items-center justify-center">
         <div className="grid lg:grid-cols-[1fr_1.8fr_1fr] gap-6 items-center w-full">
           
           {/* Left Column: Model in Black Khimar (Desktop only, framed, same height and distance from top) */}
@@ -137,7 +137,7 @@ export default function Hero({ slides = [] }: { slides?: Slide[] }) {
             </div>
 
             {/* CTA Buttons */}
-            <div className="mt-2 flex flex-col sm:flex-row items-center justify-center gap-4 w-full">
+            <div className="mt-8 lg:mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 w-full">
               <a
                 href={`https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent(
                   SITE.whatsappMessage
@@ -179,15 +179,7 @@ export default function Hero({ slides = [] }: { slides?: Slide[] }) {
               </div>
             </div>
 
-            {/* Happy Customers Badge */}
-            <div className="mt-8 bg-cream/90 backdrop-blur-sm rounded-2xl shadow-card px-4 py-2 flex items-center gap-3 border border-cream-line">
-              <span className="font-display font-bold text-emerald text-base leading-none">
-                4.8★
-              </span>
-              <span className="text-[11px] text-ink/60 font-medium">
-                2,300+ happy customers
-              </span>
-            </div>
+
           </div>
 
           {/* Right Column: Slideshow of High-Quality Images (Desktop only, framed, same height and distance from top) */}

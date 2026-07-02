@@ -40,7 +40,7 @@ module.exports = {
         body: ["var(--font-body)"],
       },
       maxWidth: {
-        wrap: "1240px",
+        wrap: "1400px",
       },
       boxShadow: {
         soft: "0 20px 50px -20px rgba(33, 29, 25, 0.25)",

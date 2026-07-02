@@ -5,7 +5,7 @@ import { IconTulip } from "./Icons";
 
 export default function Story() {
   return (
-    <section id="story" className="relative py-20 md:py-28 bg-cream">
+    <section id="story" className="relative py-12 md:py-16 bg-cream">
       <div className="max-w-wrap mx-auto px-5 md:px-8">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           <Reveal className="relative order-2 lg:order-1">

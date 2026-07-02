@@ -4,7 +4,7 @@ import { lookbook, SITE } from "@/lib/data";
 
 export default function Lookbook() {
   return (
-    <section className="relative py-20 md:py-28 bg-cream-deep/60">
+    <section className="relative py-12 md:py-16 bg-cream-deep/60">
       <div className="max-w-wrap mx-auto px-5 md:px-8">
         <Reveal className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div className="text-center md:text-left">

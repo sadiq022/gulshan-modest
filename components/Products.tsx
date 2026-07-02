@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import Image from "next/image";
 import Reveal from "./Reveal";
@@ -29,15 +30,20 @@ function formatINR(n: number) {
 
 export default function Products({ 
   products = [], 
-  categories = [] 
+  categories = [],
+  title = "This season's favourites",
+  subtitle = "A curated edit from our latest drop — message us on WhatsApp for sizing, fabric notes or a custom order."
 }: { 
   products?: Product[], 
-  categories?: Category[] 
+  categories?: Category[],
+  title?: string,
+  subtitle?: string
 }) {
   const { addToCart } = useCart();
+  const router = useRouter();
 
   return (
-    <section id="products" className="relative py-20 md:py-28 bg-cream">
+    <section id="products" className="relative py-12 md:py-16 bg-cream">
       <div className="max-w-wrap mx-auto px-5 md:px-8">
         <Reveal className="text-center max-w-xl mx-auto">
           <div className="eyebrow justify-center inline-flex items-center gap-2">
@@ -45,65 +51,54 @@ export default function Products({
             Featured Pieces
             <span className="h-px w-6 bg-gold" />
           </div>
-          <h2 className="section-heading mt-4">This season's favourites</h2>
+          <h2 className="section-heading mt-4">{title}</h2>
           <p className="section-sub mt-4">
-            A curated edit from our latest drop — message us on WhatsApp for
-            sizing, fabric notes or a custom order.
+            {subtitle}
           </p>
         </Reveal>
  
-        <div className="mt-12 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+        <div className="mt-12 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
           {products.map((p, i) => {
             const categoryName = categories.find(c => c.id === p.category_id)?.name || p.category_id || "Uncategorized";
             return (
-              <Reveal key={p.id} delay={(i % 4) as 0 | 1 | 2 | 3}>
-                <div className="lift group bg-white rounded-2xl md:rounded-[24px] overflow-hidden shadow-card border border-cream-line/70 h-full flex flex-col">
-                  <div className="relative aspect-[4/5] overflow-hidden">
+              <Reveal key={p.id} delay={(i % 5) as any}>
+                <div className="lift group bg-white rounded-xl md:rounded-2xl overflow-hidden shadow-sm hover:shadow-md border border-cream-line/80 h-full flex flex-col">
+                  <div className="relative aspect-square overflow-hidden bg-cream-deep/20">
                     <Image
                       src={p.image_url}
                       alt={p.name}
                       fill
                       sizes="(max-width: 768px) 50vw, 280px"
-                      className="object-cover transition-transform duration-700 group-hover:scale-[1.06]"
+                      className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
                     />
                     {p.badge && (
-                      <span className="absolute top-3 left-3 bg-emerald text-cream text-[10px] md:text-[11px] font-semibold tracking-wide uppercase px-2.5 py-1 rounded-full">
+                      <span className="absolute top-3 left-3 bg-emerald text-cream text-[9px] md:text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-sm">
                         {p.badge}
                       </span>
                     )}
-                  </div>
-                  <div className="p-3.5 md:p-5 flex flex-col flex-1">
-                    <span className="text-[11px] uppercase tracking-wider text-gold font-semibold">
+                    <span className="absolute bottom-3 right-3 bg-gold text-cream text-[9px] font-bold tracking-widest uppercase px-2 py-1 rounded shadow-sm">
                       {categoryName}
                     </span>
-                  <h3 className="font-display font-semibold text-ink text-[14px] md:text-base mt-1 leading-snug line-clamp-2">
-                    {p.name}
-                  </h3>
-                  <div className="mt-1.5 flex items-center gap-1 text-[12px] text-ink/60">
-                    <span className="text-gold">★</span>
-                    {p.rating}
                   </div>
-                  <div className="mt-2.5 flex items-center gap-2">
-                    <span className="font-display font-bold text-emerald text-[15px] md:text-lg">
+                  <div className="p-3 md:p-4 flex flex-col flex-1">
+                    <div className="flex-1">
+                      <Link href={`/shop/${p.id}`} className="hover:text-emerald transition-colors">
+                        <h3 className="font-display font-semibold text-ink text-[13px] md:text-[15px] leading-snug line-clamp-2">
+                          {p.name}
+                        </h3>
+                      </Link>
+                    </div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="font-display font-bold text-ink text-[14px] md:text-base">
                       {formatINR(p.price)}
                     </span>
                     {p.oldPrice && (
-                      <span className="text-ink/40 text-[13px] line-through">
+                      <span className="text-ink/40 text-[12px] line-through">
                         {formatINR(p.oldPrice)}
                       </span>
                     )}
                   </div>
-                  <div className="mt-3.5 grid grid-cols-2 gap-2">
-                    <a
-                      href={`https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent(
-                        `Hi! I'm interested in the ${p.name}.`
-                      )}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full text-center rounded-full border border-emerald/30 text-emerald text-[11px] font-semibold py-2 hover:bg-emerald hover:text-cream transition-colors flex items-center justify-center"
-                    >
-                      Enquire
-                    </a>
+                  <div className="mt-3 grid grid-cols-1 gap-2">
                     <button
                       onClick={() => addToCart({
                         id: p.id,
@@ -112,9 +107,24 @@ export default function Products({
                         image_url: p.image_url,
                         category_name: categoryName
                       })}
-                      className="w-full text-center rounded-full bg-emerald text-cream text-[11px] font-semibold py-2 hover:bg-emerald-deep transition-colors flex items-center justify-center gap-1 shadow-sm"
+                      className="w-full text-center rounded-lg border border-emerald/50 text-emerald text-[13px] md:text-sm font-bold py-2.5 hover:bg-emerald hover:border-emerald hover:text-cream transition-colors flex items-center justify-center"
                     >
-                      Add
+                      Add to cart
+                    </button>
+                    <button
+                      onClick={() => {
+                        addToCart({
+                          id: p.id,
+                          name: p.name,
+                          price: p.price,
+                          image_url: p.image_url,
+                          category_name: categoryName
+                        });
+                        router.push('/checkout');
+                      }}
+                      className="w-full text-center rounded-lg bg-emerald text-cream text-[13px] md:text-sm font-bold py-2.5 hover:bg-emerald-deep transition-colors flex items-center justify-center shadow-sm"
+                    >
+                      Buy now
                     </button>
                   </div>
                 </div>

@@ -10,7 +10,7 @@ const items = [
 export default function TrustMarquee() {
   const loopItems = [...items, ...items];
   return (
-    <div className="marquee-row relative border-y border-cream-line bg-emerald-deep py-4 overflow-hidden">
+    <div className="marquee-row relative border-y border-cream-line bg-emerald-deep py-6 md:py-8 overflow-hidden">
       <div className="marquee-track gap-10">
         {loopItems.map((item, i) => (
           <div key={i} className="flex items-center gap-10 shrink-0">
