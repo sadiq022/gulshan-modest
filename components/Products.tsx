@@ -1,18 +1,39 @@
 "use client";
 
+import Link from "next/link";
+
 import Image from "next/image";
 import Reveal from "./Reveal";
 import { SITE } from "@/lib/data";
-import dbData from "@/lib/db.json";
 import { useCart } from "@/context/CartContext";
+
+interface Product {
+  id: string;
+  name: string;
+  category_id: string;
+  image_url: string;
+  badge?: string;
+  rating?: number;
+  price: number;
+  oldPrice?: number;
+}
+
+interface Category {
+  id: string;
+  name: string;
+}
 
 function formatINR(n: number) {
   return `₹${n.toLocaleString("en-IN")}`;
 }
 
-export default function Products() {
-  const products = dbData.products;
-  const categories = dbData.categories;
+export default function Products({ 
+  products = [], 
+  categories = [] 
+}: { 
+  products?: Product[], 
+  categories?: Category[] 
+}) {
   const { addToCart } = useCart();
 
   return (
@@ -104,16 +125,12 @@ export default function Products() {
         </div>
 
         <Reveal className="mt-12 text-center">
-          <a
-            href={`https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent(
-              "Hi! I'd like to see the full Gulshan Modest catalogue."
-            )}`}
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            href="/shop"
             className="inline-flex items-center justify-center px-8 py-4 rounded-full bg-emerald text-cream font-body font-semibold text-[15px] tracking-wide shadow-card hover:bg-emerald-deep transition-colors"
           >
             View Full Catalogue
-          </a>
+          </Link>
         </Reveal>
       </div>
     </section>

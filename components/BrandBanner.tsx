@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 export default function BrandBanner() {
   return (
@@ -14,7 +15,7 @@ export default function BrandBanner() {
             {/* Monogram Logo */}
             <div className="relative w-16 h-16 mb-4 mix-blend-multiply">
               <Image
-                src="/logo.png"
+                src="/logo-dark.webp"
                 alt="Logo"
                 fill
                 className="object-contain"
@@ -38,12 +39,12 @@ export default function BrandBanner() {
             </p>
 
             {/* CTA Button */}
-            <a
-              href="#products"
+            <Link
+              href="/shop"
               className="mt-8 inline-flex items-center justify-center px-10 py-3.5 rounded-full bg-[#1E3B2E] text-cream font-body font-semibold text-[15px] tracking-wide shadow-card hover:bg-emerald-deep transition-all hover:scale-[1.02]"
             >
               Shop Collection
-            </a>
+            </Link>
           </div>
 
           {/* Right Column: Premium Model Image with Rounded Corners */}

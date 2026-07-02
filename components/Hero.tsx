@@ -4,11 +4,18 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { SITE } from "@/lib/data";
 import HeroLineArt from "./HeroLineArt";
-import dbData from "@/lib/db.json";
 
-export default function Hero() {
-  // Load active hero slides from db.json or fallback
-  const activeSlides = dbData.hero_slides.filter((slide: any) => slide.is_active);
+interface Slide {
+  image_url: string;
+  is_active: boolean;
+  text_mode?: string;
+  title?: string;
+  subtitle?: string;
+}
+
+export default function Hero({ slides = [] }: { slides?: Slide[] }) {
+  // Load active hero slides from props
+  const activeSlides = slides.filter((slide: any) => slide.is_active);
   const rightImages = activeSlides.length > 0 
     ? activeSlides.map((slide: any) => slide.image_url)
     : [
@@ -69,9 +76,9 @@ export default function Hero() {
           <div className="relative z-10 flex flex-col items-center text-center px-2 py-4">
             
             {/* Monogram Logo Icon (Black boundary / transparent bg) */}
-            <div className="relative w-16 h-16 -mt-6 md:mt-0 mb-4 mix-blend-multiply">
+            <div className="relative w-24 h-24 md:w-28 md:h-28 -mt-6 md:mt-0 mb-4 mix-blend-multiply">
               <Image
-                src="/logo.png"
+                src="/logo-dark.webp"
                 alt="Gulshan Modest Logo"
                 fill
                 className="object-contain"
@@ -145,7 +152,7 @@ export default function Hero() {
                 Shop on WhatsApp
               </a>
               <a
-                href="#products"
+                href="/shop"
                 className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-3.5 rounded-full border-2 border-emerald text-emerald font-body font-semibold text-[15px] tracking-wide hover:bg-emerald hover:text-cream transition-all hover:scale-[1.02]"
               >
                 Shop the Collection

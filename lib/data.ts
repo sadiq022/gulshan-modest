@@ -204,7 +204,7 @@ export const usps = [
 ];
 
 export const navLinks = [
-  { label: "Home", href: "/#home" },
-  { label: "Collection", href: "/#categories" },
+  { label: "Home", href: "/" },
+  { label: "Shop", href: "/shop" },
   { label: "Contact", href: "/#contact" },
 ];

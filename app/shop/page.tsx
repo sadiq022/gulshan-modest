@@ -1,20 +1,47 @@
-import dbData from '@/lib/db.json'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import ShopGrid from './_components/ShopGrid'
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata = {
   title: 'Shop Collection | Gulshan Modest',
   description: 'Browse our complete premium collection of modest abayas, hijabs, jilbabs and khimars.',
 }
 
-export default function ShopPage({
+export default async function ShopPage({
   searchParams,
 }: {
   searchParams: { category?: string }
 }) {
-  const products = dbData.products
-  const categories = dbData.categories
+  const supabase = await createClient();
+
+  const { data: productsData } = await supabase
+    .from("products")
+    .select(`
+      id, name, slug, category_id, is_active, badge, rating, price, oldPrice, featured_image_url,
+      product_images ( image_url ),
+      product_variants ( price, original_price )
+    `)
+    .eq("is_active", true);
+
+  const { data: categoriesData } = await supabase
+    .from("categories")
+    .select("*")
+    .eq("is_active", true);
+
+  const products = (productsData || []).map((p: any) => ({
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    category_id: p.category_id,
+    image_url: p.product_images?.[0]?.image_url || p.featured_image_url || "/image.png",
+    price: p.product_variants?.[0]?.price || p.price || 0,
+    oldPrice: p.product_variants?.[0]?.original_price || p.oldPrice || undefined,
+    badge: p.badge,
+    rating: p.rating || 5,
+  }));
+
+  const categories = categoriesData || [];
   const selectedCategory = searchParams.category || ''
 
   return (

@@ -61,7 +61,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
               </div>
             ) : (
               cart.map((item) => (
-                <div key={item.id} className="flex gap-4 p-3 rounded-xl border border-cream-line bg-cream/10">
+                <div key={item.cartItemId} className="flex gap-4 p-3 rounded-xl border border-cream-line bg-cream/10">
                   <div className="relative w-16 h-20 rounded-lg overflow-hidden shrink-0 border border-cream-line/50">
                     <Image
                       src={item.image_url}
@@ -76,25 +76,23 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                       <h4 className="font-semibold text-ink text-sm leading-tight line-clamp-1">
                         {item.name}
                       </h4>
-                      {item.category_name && (
-                        <p className="text-[11px] text-ink/40 uppercase tracking-wider font-semibold mt-0.5">
-                          {item.category_name}
-                        </p>
-                      )}
+                      <p className="text-[11px] text-ink/40 uppercase tracking-wider font-semibold mt-0.5">
+                        {item.category_name} {item.variant_name && `• Size: ${item.variant_name}`}
+                      </p>
                     </div>
 
                     <div className="flex items-center justify-between">
                       {/* Quantity Selector */}
                       <div className="flex items-center border border-cream-line bg-white rounded-lg">
                         <button
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.cartItemId, item.quantity - 1)}
                           className="p-1 hover:text-emerald transition-colors"
                         >
                           <Minus className="w-3.5 h-3.5" />
                         </button>
                         <span className="px-2.5 text-xs font-semibold text-ink">{item.quantity}</span>
                         <button
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          onClick={() => updateQuantity(item.cartItemId, item.quantity + 1)}
                           className="p-1 hover:text-emerald transition-colors"
                         >
                           <Plus className="w-3.5 h-3.5" />
@@ -106,7 +104,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                           ₹{(item.price * item.quantity).toLocaleString('en-IN')}
                         </span>
                         <button
-                          onClick={() => removeFromCart(item.id)}
+                          onClick={() => removeFromCart(item.cartItemId)}
                           className="text-ink/30 hover:text-red-500 transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

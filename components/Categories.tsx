@@ -1,9 +1,15 @@
 import Image from "next/image";
 import Reveal from "./Reveal";
-import dbData from "@/lib/db.json";
 
-export default function Categories() {
-  const categories = dbData.categories;
+interface Category {
+  id: string;
+  name: string;
+  description: string;
+  image_url: string;
+  count?: number;
+}
+
+export default function Categories({ categories = [] }: { categories?: Category[] }) {
 
   return (
     <section id="categories" className="relative py-20 md:py-28 bg-cream-deep/60">

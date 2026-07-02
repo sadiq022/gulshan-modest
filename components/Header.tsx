@@ -79,11 +79,11 @@ export default function Header() {
       <div className="max-w-wrap mx-auto px-5 md:px-8 flex items-center justify-between h-[72px] md:h-[84px]">
         <a href="#home" className="flex items-center gap-2.5 shrink-0">
           <Image
-            src="/logo.png"
+            src="/logo-dark.webp"
             alt="Gulshan Modest logo"
-            width={42}
-            height={42}
-            className="h-9 w-9 md:h-11 md:w-11 object-contain"
+            width={64}
+            height={64}
+            className="h-12 w-12 md:h-16 md:w-16 object-contain"
             priority
           />
           <span className="font-display font-semibold text-lg md:text-xl tracking-tight text-ink">

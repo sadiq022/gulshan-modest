@@ -11,11 +11,11 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-2.5">
               <Image
-                src="/logo.png"
+                src="/logo-light.webp"
                 alt="Gulshan Modest logo"
-                width={36}
-                height={36}
-                className="h-9 w-9 object-contain"
+                width={48}
+                height={48}
+                className="h-12 w-12 object-contain"
               />
               <span className="font-display font-semibold text-lg text-cream">
                 Gulshan Modest

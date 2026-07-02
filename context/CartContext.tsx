@@ -3,17 +3,20 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 
 export type CartItem = {
+  cartItemId: string
   id: string
   name: string
   price: number
   image_url: string
   quantity: number
   category_name?: string
+  variant_id?: string
+  variant_name?: string
 }
 
 type CartContextType = {
   cart: CartItem[]
-  addToCart: (item: Omit<CartItem, 'quantity'>) => void
+  addToCart: (item: Omit<CartItem, 'quantity' | 'cartItemId'>) => void
   removeFromCart: (id: string) => void
   updateQuantity: (id: string, quantity: number) => void
   clearCart: () => void
@@ -47,29 +50,30 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [cart])
 
-  const addToCart = (item: Omit<CartItem, 'quantity'>) => {
+  const addToCart = (item: Omit<CartItem, 'quantity' | 'cartItemId'>) => {
+    const cartItemId = `${item.id}-${item.variant_id || 'default'}`
     setCart((prev) => {
-      const existing = prev.find((i) => i.id === item.id)
+      const existing = prev.find((i) => i.cartItemId === cartItemId)
       if (existing) {
         return prev.map((i) =>
-          i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
+          i.cartItemId === cartItemId ? { ...i, quantity: i.quantity + 1 } : i
         )
       }
-      return [...prev, { ...item, quantity: 1 }]
+      return [...prev, { ...item, cartItemId, quantity: 1 }]
     })
   }
 
-  const removeFromCart = (id: string) => {
-    setCart((prev) => prev.filter((i) => i.id !== id))
+  const removeFromCart = (cartItemId: string) => {
+    setCart((prev) => prev.filter((i) => i.cartItemId !== cartItemId))
   }
 
-  const updateQuantity = (id: string, quantity: number) => {
+  const updateQuantity = (cartItemId: string, quantity: number) => {
     if (quantity <= 0) {
-      removeFromCart(id)
+      removeFromCart(cartItemId)
       return
     }
     setCart((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, quantity } : i))
+      prev.map((i) => (i.cartItemId === cartItemId ? { ...i, quantity } : i))
     )
   }
 
