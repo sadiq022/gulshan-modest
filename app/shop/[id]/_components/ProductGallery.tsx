@@ -11,9 +11,37 @@ type ProductGalleryProps = {
 
 export default function ProductGallery({ images, productName, badge }: ProductGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0)
+  const [zoomStyle, setZoomStyle] = useState<React.CSSProperties>({
+    transformOrigin: 'center',
+    transform: 'scale(1)'
+  })
+  const [isZooming, setIsZooming] = useState(false)
 
   // Ensure we have at least one image to display
   const displayImages = images.length > 0 ? images : ['/image.png']
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Only zoom on desktop (touch devices don't have hover)
+    if (window.innerWidth < 768) return
+
+    setIsZooming(true)
+    const { left, top, width, height } = e.currentTarget.getBoundingClientRect()
+    const x = ((e.clientX - left) / width) * 100
+    const y = ((e.clientY - top) / height) * 100
+    
+    setZoomStyle({
+      transformOrigin: `${x}% ${y}%`,
+      transform: 'scale(2)' // 200% zoom
+    })
+  }
+
+  const handleMouseLeave = () => {
+    setIsZooming(false)
+    setZoomStyle({
+      transformOrigin: 'center',
+      transform: 'scale(1)'
+    })
+  }
 
   return (
     <div className="flex flex-col md:flex-row gap-4">
@@ -42,17 +70,22 @@ export default function ProductGallery({ images, productName, badge }: ProductGa
       )}
 
       {/* Main Image */}
-      <div className="order-1 md:order-2 relative w-full aspect-square rounded-[32px] overflow-hidden shadow-soft border border-gold/15 bg-cream-deep">
+      <div 
+        className="order-1 md:order-2 relative w-full aspect-[4/5] rounded-[32px] overflow-hidden shadow-soft border border-gold/15 bg-cream-deep cursor-crosshair"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+      >
         <Image
           src={displayImages[activeIndex]}
           alt={`${productName} - Image ${activeIndex + 1}`}
           fill
           sizes="(max-width: 768px) 100vw, 600px"
-          className="object-cover transition-opacity duration-500"
+          style={zoomStyle}
+          className={`object-cover transition-transform ease-out ${isZooming ? 'duration-100' : 'duration-300'}`}
           priority
         />
         {badge && (
-          <span className="absolute top-4 left-4 bg-emerald text-cream text-xs font-semibold tracking-wider uppercase px-3.5 py-1.5 rounded-full shadow-sm">
+          <span className="absolute top-4 left-4 bg-emerald text-cream text-xs font-semibold tracking-wider uppercase px-3.5 py-1.5 rounded-full shadow-sm pointer-events-none">
             {badge}
           </span>
         )}

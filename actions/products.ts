@@ -336,6 +336,37 @@ export async function createProductVariant(
   return { success: true }
 }
 
+export async function bulkCreateProductVariants(
+  productId: string,
+  variants: {
+    variant_name: string
+    price: number
+    original_price: number | null
+    stock_quantity: number
+    is_active: boolean
+  }[]
+): Promise<ActionResult> {
+  const supabase = await createClient()
+
+  if (!productId || variants.length === 0) {
+    return { error: 'Invalid data' }
+  }
+
+  const rows = variants.map(v => ({
+    product_id: productId,
+    ...v
+  }))
+
+  const { error } = await supabase.from('product_variants').insert(rows)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath(`/admin/products/${productId}/edit`)
+  return { success: true }
+}
+
 export async function updateProductVariant(
   _prevState: ActionResult,
   formData: FormData

@@ -16,8 +16,12 @@ interface Slide {
 export default function Hero({ slides = [] }: { slides?: Slide[] }) {
   // Load active hero slides from props
   const activeSlides = slides.filter((slide: any) => slide.is_active);
-  const rightImages = activeSlides.length > 0 
-    ? activeSlides.map((slide: any) => slide.image_url)
+  
+  const rightActiveSlides = activeSlides.filter((slide: any) => !slide.position || slide.position === 'right');
+  const leftActiveSlides = activeSlides.filter((slide: any) => slide.position === 'left');
+
+  const rightImages = rightActiveSlides.length > 0 
+    ? rightActiveSlides.map((slide: any) => slide.image_url)
     : [
         "/model-cream-hijab.png",
         "/abaya-double-layer.png",
@@ -25,27 +29,27 @@ export default function Hero({ slides = [] }: { slides?: Slide[] }) {
         "/jilbab-blue.png",
       ];
 
+  const leftImages = leftActiveSlides.length > 0
+    ? leftActiveSlides.map((slide: any) => slide.image_url)
+    : ["/khimar-handwork-1.png"];
+
   const [activeRightIndex, setActiveRightIndex] = useState(0);
+  const [activeLeftIndex, setActiveLeftIndex] = useState(0);
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    const intervalRight = setInterval(() => {
       setActiveRightIndex((prev) => (prev + 1) % rightImages.length);
-    }, 4000); // Transition every 4 seconds
-    return () => clearInterval(interval);
+    }, 4000);
+    return () => clearInterval(intervalRight);
   }, [rightImages.length]);
 
-  // Extract current slide texts
-  const firstSlide = (activeSlides[0] || {}) as any;
-  const currentSlide = (activeSlides[activeRightIndex] || {}) as any;
-  const isGlobalMode = firstSlide.text_mode === 'global';
-
-  const heroTitle = isGlobalMode 
-    ? (firstSlide.title || "Modesty. Elegance. You.") 
-    : (currentSlide.title || "Modesty. Elegance. You.");
-
-  const heroSubtitle = isGlobalMode 
-    ? (firstSlide.subtitle || "Premium Quality Modest Fashion for Every Occasion — crafted with botanical detailing and premium fabric.") 
-    : (currentSlide.subtitle || "Premium Quality Modest Fashion for Every Occasion — crafted with botanical detailing and premium fabric.");
+  useEffect(() => {
+    // Slightly offset the left animation so they don't change at exactly the same millisecond
+    const intervalLeft = setInterval(() => {
+      setActiveLeftIndex((prev) => (prev + 1) % leftImages.length);
+    }, 4500);
+    return () => clearInterval(intervalLeft);
+  }, [leftImages.length]);
 
   return (
     <section
@@ -60,16 +64,25 @@ export default function Hero({ slides = [] }: { slides?: Slide[] }) {
       <div className="max-w-wrap mx-auto px-5 md:px-8 relative z-10 w-full min-h-[580px] flex items-center justify-center">
         <div className="grid lg:grid-cols-[1fr_1.8fr_1fr] gap-6 items-center w-full">
           
-          {/* Left Column: Model in Black Khimar (Desktop only, framed, same height and distance from top) */}
+          {/* Left Column: Slideshow of High-Quality Images (Desktop only, framed) */}
           <div className="hidden lg:block relative w-[340px] h-[520px] mx-auto rounded-[28px] overflow-hidden shadow-soft border border-gold/15 bg-cream-deep self-start mt-6">
-            <Image
-              src="/khimar-handwork-1.png"
-              alt="Gulshan Modest Black Khimar"
-              fill
-              sizes="340px"
-              className="object-cover object-center"
-              priority
-            />
+            {leftImages.map((src, index) => (
+              <div
+                key={src + "-left-desktop"}
+                className={`absolute inset-0 transition-opacity duration-1000 ${
+                  index === activeLeftIndex ? "opacity-100 z-10" : "opacity-0 z-0"
+                }`}
+              >
+                <Image
+                  src={src}
+                  alt="Gulshan Modest Collection"
+                  fill
+                  sizes="340px"
+                  className="object-cover object-center"
+                  priority={index === 0}
+                />
+              </div>
+            ))}
           </div>
 
           {/* Center Column: Logo, Brand Text, and Actions (Centered) */}
@@ -93,29 +106,32 @@ export default function Hero({ slides = [] }: { slides?: Slide[] }) {
             <div className="w-16 h-[1px] bg-gold/50 my-2" />
 
             <h1 className="mt-3 font-display font-bold leading-[1.1] text-[2.8rem] sm:text-5xl md:text-6xl text-emerald">
-              {heroTitle === "Gulshan Modest" || heroTitle === "Modesty. Elegance. You." || !heroTitle ? (
-                <>
-                  Modesty. <br />
-                  <span className="text-gold">Elegance.</span> You.
-                </>
-              ) : (
-                heroTitle
-              )}
+              Modesty. <br />
+              <span className="text-gold">Elegance.</span> You.
             </h1>
 
             <p className="mt-5 text-base md:text-lg text-emerald/80 font-body max-w-[480px] leading-relaxed">
-              {heroSubtitle}
+              Premium Quality Modest Fashion for Every Occasion — crafted with botanical detailing and premium fabric.
             </p>
 
             {/* Mobile/Tablet Model Showcase (Just below hero text, above buttons) */}
             <div className="lg:hidden my-8 grid grid-cols-2 gap-4 w-full max-w-[360px] mx-auto">
               <div className="relative aspect-[3/4.5] rounded-2xl overflow-hidden shadow-soft border border-gold/15 bg-cream-deep">
-                <Image
-                  src="/khimar-handwork-1.png"
-                  alt="Model"
-                  fill
-                  className="object-cover object-center"
-                />
+                {leftImages.map((src, index) => (
+                  <div
+                    key={src + "-left-mobile"}
+                    className={`absolute inset-0 transition-opacity duration-700 ${
+                      index === activeLeftIndex ? "opacity-100 z-10" : "opacity-0 z-0"
+                    }`}
+                  >
+                    <Image
+                      src={src}
+                      alt="Model"
+                      fill
+                      className="object-cover object-center"
+                    />
+                  </div>
+                ))}
               </div>
               <div className="relative aspect-[3/4.5] rounded-2xl overflow-hidden shadow-soft border border-gold/15 bg-cream-deep">
                 {rightImages.map((src, index) => (

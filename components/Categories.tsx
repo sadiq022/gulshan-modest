@@ -27,12 +27,12 @@ export default function Categories({ categories = [] }: { categories?: Category[
           </p>
         </Reveal>
  
-        <div className="mt-12 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
-          {categories.map((cat, i) => (
-            <Reveal key={cat.id} delay={(i % 5) as any}>
+        <div className="mt-12 flex flex-wrap justify-center gap-4 md:gap-6">
+          {categories.slice(0, 10).map((cat, i) => (
+            <Reveal key={cat.id} delay={(i % 5) as any} className="flex-none w-[calc(50%-0.5rem)] md:w-[calc(33.333%-1rem)] lg:w-[calc(20%-1.2rem)]">
               <a
                 href={`/shop?category=${cat.id}`}
-                className="lift group block relative rounded-2xl md:rounded-[28px] overflow-hidden shadow-card aspect-[3/4]"
+                className="lift group block relative h-full rounded-2xl md:rounded-[28px] overflow-hidden shadow-card aspect-[3/4]"
               >
                 <Image
                   src={cat.image_url}

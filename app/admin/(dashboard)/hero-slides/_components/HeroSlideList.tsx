@@ -2,33 +2,27 @@
 
 import { useState, useTransition } from 'react'
 import Image from 'next/image'
-import { createHeroSlide, deleteHeroSlide, toggleHeroSlideStatus, updateHeroSlideText } from '@/actions/admin/hero'
-import { Trash2, Plus, GripVertical, Image as ImageIcon, Loader2, ChevronDown, ChevronUp, Save } from 'lucide-react'
+import { createHeroSlide, deleteHeroSlide, toggleHeroSlideStatus } from '@/actions/admin/hero'
+import { Trash2, Plus, GripVertical, Image as ImageIcon, Loader2 } from 'lucide-react'
 import { CldUploadWidget } from 'next-cloudinary'
 
 export function HeroSlideList({ 
   initialSlides, 
-  globalText, 
-  textMode 
+  position = 'right',
+  title = 'Background Images & Slides'
 }: { 
   initialSlides: any[], 
-  globalText: any, 
-  textMode: 'global' | 'per_slide' 
+  position?: 'left' | 'right',
+  title?: string
 }) {
   const [slides, setSlides] = useState(initialSlides)
   const [isPending, startTransition] = useTransition()
-  
-  // Track which slide's text editor is open
-  const [expandedSlideId, setExpandedSlideId] = useState<string | null>(null)
-  
-  // Track text edits for the currently expanded slide
-  const [editData, setEditData] = useState({ title: '', subtitle: '', button_text: '', button_link: '' })
 
   const handleUploadSuccess = (result: any) => {
     const imageUrl = result.info.secure_url
     
     startTransition(async () => {
-      const res = await createHeroSlide(imageUrl, globalText)
+      const res = await createHeroSlide(imageUrl, position)
       if (res.success) {
         window.location.reload()
       } else {
@@ -57,32 +51,6 @@ export function HeroSlideList({
     })
   }
 
-  const toggleExpand = (slide: any) => {
-    if (expandedSlideId === slide.id) {
-      setExpandedSlideId(null)
-    } else {
-      setExpandedSlideId(slide.id)
-      setEditData({
-        title: slide.title || '',
-        subtitle: slide.subtitle || '',
-        button_text: slide.button_text || '',
-        button_link: slide.button_link || ''
-      })
-    }
-  }
-
-  const handleSaveText = (id: string) => {
-    startTransition(async () => {
-      const res = await updateHeroSlideText(id, editData)
-      if (res.success) {
-        setSlides(slides.map(s => s.id === id ? { ...s, ...editData } : s))
-        setExpandedSlideId(null)
-      } else {
-        alert(res.error)
-      }
-    })
-  }
-
   const activeCount = slides.filter(s => s.is_active).length
 
   return (
@@ -90,7 +58,7 @@ export function HeroSlideList({
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <ImageIcon className="w-5 h-5 text-stone-400" />
-          <h2 className="text-lg font-bold text-stone-900">Background Images & Slides</h2>
+          <h2 className="text-lg font-bold text-stone-900">{title}</h2>
         </div>
         
         {slides.length < 5 ? (
@@ -123,7 +91,6 @@ export function HeroSlideList({
 
       <p className="text-sm text-stone-500 mb-6 leading-relaxed">
         Upload high-quality images (16:9 ratio recommended). They will loop automatically. You have {activeCount} active slides.
-        {textMode === 'per_slide' && " Click on a slide to edit its specific text overlay."}
       </p>
 
       <div className="space-y-4">
@@ -135,8 +102,6 @@ export function HeroSlideList({
           </div>
         ) : (
           slides.map((slide, index) => {
-            const isExpanded = expandedSlideId === slide.id
-
             return (
               <div key={slide.id} className={`flex flex-col rounded-xl border transition-all overflow-hidden ${slide.is_active ? 'border-stone-200 bg-white' : 'border-stone-100 bg-stone-50 opacity-60'}`}>
                 
@@ -158,22 +123,11 @@ export function HeroSlideList({
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-stone-900">Slide {index + 1}</p>
                     <p className="text-xs text-stone-500 truncate mt-0.5">
-                      {textMode === 'per_slide' && slide.title ? `"${slide.title}"` : slide.image_url.split('/').pop()}
+                      {slide.image_url.split('/').pop()}
                     </p>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    
-                    {textMode === 'per_slide' && (
-                      <button
-                        onClick={() => toggleExpand(slide)}
-                        className="px-3 py-1.5 text-xs font-semibold text-stone-600 bg-stone-100 hover:bg-stone-200 rounded-lg transition-colors flex items-center gap-1"
-                      >
-                        Edit Text
-                        {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                      </button>
-                    )}
-
                     <label className="relative inline-flex items-center cursor-pointer ml-2">
                       <input 
                         type="checkbox" 
@@ -195,66 +149,6 @@ export function HeroSlideList({
                     </button>
                   </div>
                 </div>
-
-                {/* Expanded Text Editor (Only in per-slide mode) */}
-                {isExpanded && textMode === 'per_slide' && (
-                  <div className="p-4 bg-stone-50 border-t border-stone-200">
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-xs font-bold text-stone-700 mb-1">Heading</label>
-                        <input
-                          type="text"
-                          maxLength={255}
-                          value={editData.title}
-                          onChange={(e) => setEditData({ ...editData, title: e.target.value })}
-                          className="w-full px-3 py-2 bg-white border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-stone-700 mb-1">Subheading</label>
-                        <textarea
-                          value={editData.subtitle}
-                          maxLength={500}
-                          onChange={(e) => setEditData({ ...editData, subtitle: e.target.value })}
-                          rows={2}
-                          className="w-full px-3 py-2 bg-white border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all resize-none"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-bold text-stone-700 mb-1">Button Text</label>
-                          <input
-                            type="text"
-                            maxLength={50}
-                            value={editData.button_text}
-                            onChange={(e) => setEditData({ ...editData, button_text: e.target.value })}
-                            className="w-full px-3 py-2 bg-white border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold text-stone-700 mb-1">Button Link</label>
-                          <input
-                            type="text"
-                            maxLength={255}
-                            value={editData.button_link}
-                            onChange={(e) => setEditData({ ...editData, button_link: e.target.value })}
-                            className="w-full px-3 py-2 bg-white border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex justify-end pt-2">
-                        <button
-                          onClick={() => handleSaveText(slide.id)}
-                          disabled={isPending}
-                          className="px-4 py-2 bg-stone-900 text-white text-xs font-bold rounded-lg hover:bg-stone-800 transition-colors flex items-center gap-2"
-                        >
-                          <Save className="w-3 h-3" />
-                          Save Slide Text
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )
           })

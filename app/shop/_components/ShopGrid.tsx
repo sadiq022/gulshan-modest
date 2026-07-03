@@ -34,7 +34,7 @@ export default function ShopGrid({ initialProducts, categories, selectedCategory
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
     selectedCategory ? [selectedCategory] : []
   )
-  const [maxPrice, setMaxPrice] = useState<number>(10000)
+  const [maxPrice, setMaxPrice] = useState<number>(15000)
   const { addToCart } = useCart()
   const router = useRouter()
 
@@ -110,7 +110,7 @@ export default function ShopGrid({ initialProducts, categories, selectedCategory
           step="100" 
           value={maxPrice} 
           onChange={(e) => setMaxPrice(Number(e.target.value))}
-          className="w-full h-1.5 bg-cream-line rounded-lg appearance-none cursor-pointer accent-emerald"
+          className="w-full cursor-pointer accent-emerald"
         />
         <div className="flex justify-between text-[11px] text-ink/50 mt-3 font-bold uppercase tracking-wider">
           <span>₹500</span>
@@ -173,7 +173,7 @@ export default function ShopGrid({ initialProducts, categories, selectedCategory
               const catName = categories.find(c => c.id === p.category_id)?.name || p.category_id
               return (
                 <div key={p.id} className="lift group bg-white rounded-xl md:rounded-2xl overflow-hidden shadow-sm hover:shadow-md border border-cream-line/80 flex flex-col">
-                  <Link href={`/shop/${p.id}`} className="relative aspect-square overflow-hidden block bg-cream-deep/20">
+                  <Link href={`/shop/${p.id}`} className="relative aspect-[4/5] overflow-hidden block bg-cream-deep/20">
                     <Image
                       src={p.image_url}
                       alt={p.name}

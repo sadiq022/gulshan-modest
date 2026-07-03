@@ -44,9 +44,9 @@ export default function LuxeSalwarKameez({ products = [] }: { products?: Product
           </p>
         </Reveal>
 
-        <div className="mt-12 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
-          {products.map((p, i) => (
-            <Reveal key={p.id} delay={(i % 5) as any}>
+        <div className="mt-12 flex flex-wrap justify-center gap-4 md:gap-6">
+          {products.slice(0, 10).map((p, i) => (
+            <Reveal key={p.id} delay={(i % 5) as any} className="flex-none w-[calc(50%-0.5rem)] md:w-[calc(33.333%-1rem)] lg:w-[calc(20%-1.2rem)]">
               <div className="lift group bg-white rounded-xl md:rounded-2xl overflow-hidden shadow-sm hover:shadow-md border border-cream-line/80 h-full flex flex-col">
                 <div className="relative aspect-[4/5] overflow-hidden bg-cream-deep/20">
                   <Image
