@@ -3,10 +3,11 @@
 import React, { useState, useEffect, useTransition } from 'react'
 import { useCart } from '@/context/CartContext'
 import { validateCoupon } from '@/actions/admin/coupons'
-import { placeLocalOrder } from '@/actions/checkout'
+import { processCheckout, verifyRazorpayPayment } from '@/actions/checkout'
 import { SITE } from '@/lib/data'
 import { Truck, Tag, CreditCard, ShoppingBag, ShieldCheck, CheckCircle2 } from 'lucide-react'
 import Image from 'next/image'
+import Script from 'next/script'
 
 type ShippingSettings = {
   flat_rate: number
@@ -97,6 +98,51 @@ export default function CheckoutForm({ shipping }: { shipping: ShippingSettings 
     }
   }
 
+  const handleRazorpayPayment = async (orderData: any, addressString: string) => {
+    const options = {
+      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, // Enter the Key ID generated from the Dashboard
+      amount: orderData.amount,
+      currency: "INR",
+      name: SITE.name,
+      description: "Order Payment",
+      order_id: orderData.razorpayOrderId,
+      handler: async function (response: any) {
+        const verifyRes = await verifyRazorpayPayment(
+          response.razorpay_payment_id,
+          response.razorpay_order_id,
+          response.razorpay_signature,
+          orderData.orderId
+        )
+        if (verifyRes.success) {
+          setPlacedOrder({
+            order_number: orderData.orderNumber,
+            id: orderData.orderId,
+            total: grandTotal,
+            items: [...cart],
+            shippingAddress: addressString
+          })
+          clearCart()
+        } else {
+          alert('Payment verification failed. Please contact support.')
+        }
+      },
+      prefill: {
+        name: profile.fullName,
+        contact: profile.phone,
+      },
+      theme: {
+        color: "#1E3B2E" // Emerald
+      }
+    };
+    
+    // @ts-ignore
+    const rzp1 = new window.Razorpay(options);
+    rzp1.on('payment.failed', function (response: any){
+        alert("Payment failed! Reason: " + response.error.description);
+    });
+    rzp1.open();
+  }
+
   // Handle Checkout Submit
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -107,35 +153,25 @@ export default function CheckoutForm({ shipping }: { shipping: ShippingSettings 
 
     startTransition(async () => {
       const addressString = `${profile.street}, ${profile.city}, ${profile.state} - ${profile.zipCode}`
-      const res = await placeLocalOrder({
-        customer_name: profile.fullName,
-        customer_phone: profile.phone,
-        shipping_address: addressString,
-        items: cart.map(item => ({
-          id: item.id,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity
-        })),
-        subtotal,
-        shipping_cost: shippingFee,
-        discount,
-        coupon_code: activeCoupon?.code,
-        total_amount: grandTotal,
-        payment_method: paymentMethod
-      })
+      const method = paymentMethod === 'Online Payment (Razorpay)' ? 'RAZORPAY' : 'COD'
+      
+      const res = await processCheckout(profile, cart, method)
 
       if (!res.success) {
         alert(res.error || 'Failed to place order.')
       } else {
-        setPlacedOrder({
-          order_number: res.order_number,
-          id: res.id,
-          total: grandTotal,
-          items: [...cart],
-          shippingAddress: addressString
-        })
-        clearCart()
+        if (res.isRazorpay) {
+          handleRazorpayPayment(res, addressString)
+        } else {
+          setPlacedOrder({
+            order_number: res.order_number,
+            id: res.orderId,
+            total: grandTotal,
+            items: [...cart],
+            shippingAddress: addressString
+          })
+          clearCart()
+        }
       }
     })
   }
@@ -199,6 +235,7 @@ export default function CheckoutForm({ shipping }: { shipping: ShippingSettings 
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       {/* Left Column: Shipping Address & Payment Form */}
       <form onSubmit={handleSubmit} className="lg:col-span-7 space-y-6">
         <div className="bg-white rounded-3xl p-6 md:p-8 border border-cream-line shadow-card space-y-6">

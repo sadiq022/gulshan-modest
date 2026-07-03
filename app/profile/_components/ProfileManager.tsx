@@ -13,7 +13,7 @@ type CustomerProfile = {
   zipCode: string
 }
 
-export default function ProfileManager({ adminProfile }: { adminProfile: any }) {
+export default function ProfileManager({ adminProfile, orders = [] }: { adminProfile: any, orders?: any[] }) {
   const [profile, setProfile] = useState<CustomerProfile>({
     fullName: '',
     phone: '',
@@ -200,9 +200,30 @@ export default function ProfileManager({ adminProfile }: { adminProfile: any }) 
         <h3 className="text-base font-semibold text-ink flex items-center gap-2">
           <Package className="w-5 h-5 text-gold" /> Order History
         </h3>
-        <div className="text-center py-6 text-ink/50 text-sm">
-          No orders placed yet. Add items to your cart and enquiry to get started!
-        </div>
+        {orders && orders.length > 0 ? (
+          <div className="space-y-4 mt-4">
+            {orders.map((order) => (
+              <div key={order.id} className="border border-cream-line rounded-xl p-4 flex justify-between items-center bg-cream/20">
+                <div>
+                  <div className="font-bold text-ink">Order #{order.order_number}</div>
+                  <div className="text-xs text-ink/60 mt-1">
+                    {new Date(order.created_at).toLocaleDateString()}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-semibold text-emerald">₹{order.total_amount}</div>
+                  <div className="text-xs uppercase tracking-wider font-bold mt-1 text-ink/60 bg-cream border border-cream-line px-2 py-0.5 rounded-md inline-block">
+                    {order.order_status}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-6 text-ink/50 text-sm">
+            No orders placed yet. Add items to your cart and enquiry to get started!
+          </div>
+        )}
       </div>
     </div>
   )

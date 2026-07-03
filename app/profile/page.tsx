@@ -13,6 +13,7 @@ export default async function CustomerProfilePage() {
   const { data: { user } } = await supabase.auth.getUser()
   
   let adminProfile = null
+  let orders = []
   if (user) {
     const { data } = await supabase
       .from('profiles')
@@ -20,6 +21,16 @@ export default async function CustomerProfilePage() {
       .eq('id', user.id)
       .single()
     adminProfile = data
+
+    const { data: userOrders } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+    
+    if (userOrders) {
+      orders = userOrders
+    }
   }
 
   return (
@@ -39,7 +50,7 @@ export default async function CustomerProfilePage() {
             </p>
           </div>
 
-          <ProfileManager adminProfile={adminProfile} />
+          <ProfileManager adminProfile={adminProfile} orders={orders} />
         </div>
       </main>
       <Footer />

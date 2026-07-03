@@ -164,15 +164,24 @@ export async function createOrder(addressId: string, paymentMethod: 'COD' | 'RAZ
     }
   }
 
-  // If COD, clear cart and finish
+  // If COD, clear cart, decrement stock, and finish
   await supabase
     .from('cart_items')
     .delete()
     .eq('user_id', user.id)
 
+  for (const item of orderItems) {
+    const { data: variant } = await supabase.from('product_variants').select('stock_quantity').eq('id', item.variant_id).single()
+    if (variant) {
+      await supabase.from('product_variants').update({
+        stock_quantity: Math.max(0, variant.stock_quantity - item.quantity)
+      }).eq('id', item.variant_id)
+    }
+  }
+
   revalidatePath('/cart')
   revalidatePath('/checkout')
-  revalidatePath('/account/orders')
+  revalidatePath('/profile')
 
   return { success: true, isRazorpay: false, order_number: order.order_number, orderId: order.id }
 }
@@ -217,7 +226,25 @@ export async function verifyRazorpayPayment(
     return { success: false, error: 'Failed to update order status' }
   }
 
-  // 4. Clear Cart
+  // 4. Get order items to decrement stock
+  const { data: orderItems } = await supabase
+    .from('order_items')
+    .select('variant_id, quantity')
+    .eq('order_id', internal_order_id)
+
+  if (orderItems) {
+    for (const item of orderItems) {
+      if (!item.variant_id) continue
+      const { data: variant } = await supabase.from('product_variants').select('stock_quantity').eq('id', item.variant_id).single()
+      if (variant) {
+        await supabase.from('product_variants').update({
+          stock_quantity: Math.max(0, variant.stock_quantity - item.quantity)
+        }).eq('id', item.variant_id)
+      }
+    }
+  }
+
+  // 5. Clear Cart
   await supabase
     .from('cart_items')
     .delete()
@@ -225,48 +252,74 @@ export async function verifyRazorpayPayment(
 
   revalidatePath('/cart')
   revalidatePath('/checkout')
-  revalidatePath('/account/orders')
+  revalidatePath('/profile')
 
   return { success: true }
 }
 
-export async function placeLocalOrder(data: {
-  customer_name: string
-  customer_phone: string
-  shipping_address: string
-  items: any[]
-  subtotal: number
-  shipping_cost: number
-  discount: number
-  coupon_code?: string
-  total_amount: number
-  payment_method: 'Cash on Delivery' | 'Online Payment (Razorpay)'
-}) {
+export async function processCheckout(
+  profile: { fullName: string, phone: string, street: string, city: string, state: string, zipCode: string },
+  items: any[],
+  paymentMethod: 'COD' | 'RAZORPAY'
+) {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'You must be logged in to checkout.' }
 
-  // Generate order number
-  const order_number = `${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`
-
-  const { data: newOrder, error } = await supabase
-    .from('orders')
-    .insert([{
-      order_number,
-      customer_name: data.customer_name,
-      customer_phone: data.customer_phone,
-      shipping_address: data.shipping_address,
-      total_amount: data.total_amount,
-      payment_method: data.payment_method,
-      payment_status: data.payment_method === 'Cash on Delivery' ? 'pending' : 'paid',
-      order_status: 'processing',
-      created_at: new Date().toISOString()
-    }])
-    .select('id, order_number')
+  // 1. Create or get address
+  let addressId = ''
+  const { data: existingAddress } = await supabase
+    .from('addresses')
+    .select('id')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
     .single()
 
-  if (error) {
-    return { success: false, error: error.message }
+  if (existingAddress) {
+    // Update existing address
+    await supabase.from('addresses').update({
+      full_name: profile.fullName,
+      phone: profile.phone,
+      address_line_1: profile.street,
+      city: profile.city,
+      state: profile.state,
+      postal_code: profile.zipCode,
+      country: 'India'
+    }).eq('id', existingAddress.id)
+    addressId = existingAddress.id
+  } else {
+    // Insert new address
+    const { data: newAddress, error: addressError } = await supabase.from('addresses').insert({
+      user_id: user.id,
+      full_name: profile.fullName,
+      phone: profile.phone,
+      address_line_1: profile.street,
+      city: profile.city,
+      state: profile.state,
+      postal_code: profile.zipCode,
+      country: 'India',
+      is_default: true
+    }).select('id').single()
+
+    if (addressError || !newAddress) return { success: false, error: 'Failed to save address.' }
+    addressId = newAddress.id
   }
 
-  revalidatePath('/admin/orders')
-  return { success: true, order_number: newOrder.order_number, id: newOrder.id }
+  // 2. Sync cart items to DB
+  // Clear existing cart
+  await supabase.from('cart_items').delete().eq('user_id', user.id)
+  
+  // Insert new cart items
+  const cartInserts = items.map(item => ({
+    user_id: user.id,
+    variant_id: item.variant.id,
+    quantity: item.quantity
+  }))
+  
+  const { error: cartError } = await supabase.from('cart_items').insert(cartInserts)
+  if (cartError) return { success: false, error: 'Failed to sync cart.' }
+
+  // 3. Call createOrder
+  return await createOrder(addressId, paymentMethod)
 }

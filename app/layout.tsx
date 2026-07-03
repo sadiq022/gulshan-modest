@@ -28,6 +28,10 @@ export const metadata: Metadata = {
     "hijab",
     "modest wear India",
   ],
+  icons: {
+    icon: '/logo-dark.webp',
+    apple: '/logo-dark.webp',
+  },
   openGraph: {
     title: "Gulshan Modest | Modest Fashion, Quietly Elevated",
     description:
