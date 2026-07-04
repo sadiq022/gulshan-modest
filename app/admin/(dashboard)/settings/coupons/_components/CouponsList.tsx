@@ -1,12 +1,16 @@
 'use client'
 
-import React, { useTransition, useState } from 'react'
+import React, { useTransition, useState, useEffect } from 'react'
 import { Coupon, deleteCoupon } from '@/actions/admin/coupons'
 import { Trash2, ShieldCheck, ShieldAlert } from 'lucide-react'
 
 export default function CouponsList({ initialCoupons }: { initialCoupons: Coupon[] }) {
   const [coupons, setCoupons] = useState<Coupon[]>(initialCoupons)
   const [pending, startTransition] = useTransition()
+
+  useEffect(() => {
+    setCoupons(initialCoupons)
+  }, [initialCoupons])
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this coupon?')) return

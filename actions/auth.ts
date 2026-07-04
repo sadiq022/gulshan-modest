@@ -15,20 +15,23 @@ export async function login(
 ): Promise<AuthResult> {
   const supabase = await createClient()
 
-  const email = formData.get('email') as string
+  const phone = formData.get('phone') as string
   const password = formData.get('password') as string
 
-  if (!email || !password) {
-    return { error: 'Email and password are required' }
+  if (!phone || !password) {
+    return { error: 'Phone number and password are required' }
   }
 
+  const cleanPhone = phone.replace(/\D/g, '')
+  const syntheticEmail = `user${cleanPhone}@gulshanmodest.com`
+
   const { error } = await supabase.auth.signInWithPassword({
-    email,
+    email: syntheticEmail,
     password,
   })
 
   if (error) {
-    return { error: error.message }
+    return { error: 'Invalid phone number or password' }
   }
 
   revalidatePath('/', 'layout')
@@ -42,28 +45,55 @@ export async function register(
   const supabase = await createClient()
 
   const fullName = formData.get('full_name') as string
-  const email = formData.get('email') as string
   const phone = formData.get('phone') as string
+  const email = formData.get('email') as string // optional
   const password = formData.get('password') as string
 
-  if (!fullName || !email || !password) {
-    return { error: 'Full name, email, and password are required' }
+  if (!fullName || !phone || !password) {
+    return { error: 'Full name, phone, and password are required' }
   }
 
-  const { error } = await supabase.auth.signUp({
-    email,
+  const cleanPhone = phone.replace(/\D/g, '')
+  if (cleanPhone.length < 10) {
+    return { error: 'Please enter a valid phone number' }
+  }
+
+  const syntheticEmail = `user${cleanPhone}@gulshanmodest.com`
+
+  // 1. Create the user using the Admin API to forcefully confirm the email 
+  // and bypass rate-limiting on the free tier.
+  const { createAdminClient } = await import('@/lib/supabase/admin')
+  const adminAuth = createAdminClient().auth.admin
+
+  const { error: createError } = await adminAuth.createUser({
+    email: syntheticEmail,
     password,
-    options: {
-      data: {
-        full_name: fullName,
-        phone: phone || '',
-        role: 'customer',
-      },
+    email_confirm: true, // Forces immediate verification!
+    user_metadata: {
+      full_name: fullName,
+      phone: cleanPhone,
+      real_email: email || '',
+      role: 'customer',
     },
   })
 
-  if (error) {
-    return { error: error.message }
+  // If the user already exists (or other creation error), catch it
+  if (createError) {
+    if (createError.message.includes('already been registered')) {
+      return { error: 'An account with this phone number already exists' }
+    }
+    return { error: createError.message }
+  }
+
+  // 2. Now that the user exists and is confirmed, sign them in with the standard client
+  // to properly establish their secure cookie session in the browser.
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: syntheticEmail,
+    password,
+  })
+
+  if (signInError) {
+    return { error: 'Account created but failed to log in automatically.' }
   }
 
   revalidatePath('/', 'layout')

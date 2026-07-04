@@ -28,6 +28,7 @@ export async function createCoupon(coupon: Omit<Coupon, 'id' | 'created_at'>) {
     .from('coupons')
     .insert([{
       ...coupon,
+      id: crypto.randomUUID(),
       code: coupon.code.toUpperCase().trim()
     }])
   

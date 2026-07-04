@@ -15,7 +15,7 @@ export default function Header() {
   const [cartOpen, setCartOpen] = useState(false);
   const { cartCount } = useCart();
   const [user, setUser] = useState<any>(null);
-  const isAdmin = user && (user.email?.includes('admin') || (typeof document !== 'undefined' && document.cookie.includes('mock-admin-logged-in=true')));
+  const isAdmin = user && (user.email === 'admin@gulshanmodest.com' || user.user_metadata?.role === 'admin');
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -168,7 +168,7 @@ export default function Header() {
             </button>
           ) : (
             <a
-              href="/admin/login"
+              href="/login"
               className="inline-flex items-center justify-center px-6 py-2.5 rounded-full bg-emerald text-cream font-body font-semibold text-sm tracking-wide hover:bg-emerald-deep transition-colors shadow-card"
             >
               Login/Register
@@ -317,7 +317,7 @@ export default function Header() {
             </button>
           ) : (
             <a
-              href="/admin/login"
+              href="/login"
               onClick={() => setOpen(false)}
               className="mt-7 inline-flex items-center justify-center px-6 py-3.5 rounded-full bg-emerald text-cream font-body font-semibold text-base shadow-card"
             >

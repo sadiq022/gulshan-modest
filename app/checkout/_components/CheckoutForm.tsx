@@ -251,6 +251,7 @@ export default function CheckoutForm({ shipping }: { shipping: ShippingSettings 
               <input
                 type="text"
                 required
+                maxLength={50}
                 value={profile.fullName}
                 onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
                 placeholder="e.g. Sumaiya Khan"
@@ -264,9 +265,12 @@ export default function CheckoutForm({ shipping }: { shipping: ShippingSettings 
               <input
                 type="text"
                 required
+                maxLength={10}
+                pattern="\d{10}"
+                title="Please enter exactly 10 digits"
                 value={profile.phone}
-                onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                placeholder="e.g. +91 98765 43210"
+                onChange={(e) => setProfile({ ...profile, phone: e.target.value.replace(/\D/g, '') })}
+                placeholder="e.g. 9876543210"
                 className="w-full px-4 py-2.5 rounded-xl border border-cream-line bg-cream/20 text-ink focus:outline-none focus:ring-2 focus:ring-emerald/20 focus:border-emerald transition-all text-sm"
               />
             </div>
@@ -280,6 +284,7 @@ export default function CheckoutForm({ shipping }: { shipping: ShippingSettings 
               <input
                 type="text"
                 required
+                maxLength={150}
                 value={profile.street}
                 onChange={(e) => setProfile({ ...profile, street: e.target.value })}
                 placeholder="e.g. Apartment number, street name"
@@ -295,6 +300,7 @@ export default function CheckoutForm({ shipping }: { shipping: ShippingSettings 
                 <input
                   type="text"
                   required
+                  maxLength={50}
                   value={profile.city}
                   onChange={(e) => setProfile({ ...profile, city: e.target.value })}
                   placeholder="e.g. New Delhi"
@@ -308,6 +314,7 @@ export default function CheckoutForm({ shipping }: { shipping: ShippingSettings 
                 <input
                   type="text"
                   required
+                  maxLength={50}
                   value={profile.state}
                   onChange={(e) => setProfile({ ...profile, state: e.target.value })}
                   placeholder="e.g. Delhi"
@@ -323,8 +330,11 @@ export default function CheckoutForm({ shipping }: { shipping: ShippingSettings 
               <input
                 type="text"
                 required
+                maxLength={6}
+                pattern="\d{6}"
+                title="Please enter a valid 6-digit PIN code"
                 value={profile.zipCode}
-                onChange={(e) => setProfile({ ...profile, zipCode: e.target.value })}
+                onChange={(e) => setProfile({ ...profile, zipCode: e.target.value.replace(/\D/g, '') })}
                 placeholder="e.g. 110001"
                 className="w-full px-4 py-2.5 rounded-xl border border-cream-line bg-cream/20 text-ink focus:outline-none focus:ring-2 focus:ring-emerald/20 focus:border-emerald transition-all text-sm"
               />
