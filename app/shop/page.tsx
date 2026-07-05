@@ -12,11 +12,14 @@ export const metadata = {
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams: { category?: string }
+  searchParams: { category?: string; search?: string }
 }) {
   const supabase = await createClient();
 
-  const { data: productsData } = await supabase
+  const resolvedSearchParams = await searchParams;
+  const searchQuery = resolvedSearchParams.search || '';
+
+  let productsQuery = supabase
     .from("products")
     .select(`
       id, name, slug, category_id, is_active, badge, rating, price, oldPrice, featured_image_url,
@@ -24,6 +27,12 @@ export default async function ShopPage({
       product_variants ( price, original_price )
     `)
     .eq("is_active", true);
+
+  if (searchQuery) {
+    productsQuery = productsQuery.ilike('name', `%${searchQuery}%`);
+  }
+
+  const { data: productsData } = await productsQuery;
 
   const { data: categoriesData } = await supabase
     .from("categories")
@@ -43,8 +52,6 @@ export default async function ShopPage({
   }));
 
   const categories = categoriesData || [];
-  // In Next.js 15+, searchParams is a promise
-  const resolvedSearchParams = await searchParams;
   const selectedCategory = resolvedSearchParams.category || ''
 
   return (

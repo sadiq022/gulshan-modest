@@ -21,7 +21,10 @@ export async function getInquiries() {
   const isAdmin = await checkAdminAuth(supabase)
   if (!isAdmin) return []
 
-  const { data } = await supabase
+  const { createAdminClient } = await import('@/lib/supabase/admin')
+  const adminClient = createAdminClient()
+
+  const { data } = await adminClient
     .from('contact_inquiries')
     .select('*')
     .order('created_at', { ascending: false })
@@ -34,7 +37,10 @@ export async function markInquiryAsRead(id: string) {
   const isAdmin = await checkAdminAuth(supabase)
   if (!isAdmin) return { success: false, error: 'Unauthorized' }
 
-  const { error } = await supabase
+  const { createAdminClient } = await import('@/lib/supabase/admin')
+  const adminClient = createAdminClient()
+
+  const { error } = await adminClient
     .from('contact_inquiries')
     .update({ status: 'read' })
     .eq('id', id)
@@ -50,7 +56,10 @@ export async function deleteInquiry(id: string) {
   const isAdmin = await checkAdminAuth(supabase)
   if (!isAdmin) return { success: false, error: 'Unauthorized' }
 
-  const { error } = await supabase
+  const { createAdminClient } = await import('@/lib/supabase/admin')
+  const adminClient = createAdminClient()
+
+  const { error } = await adminClient
     .from('contact_inquiries')
     .delete()
     .eq('id', id)

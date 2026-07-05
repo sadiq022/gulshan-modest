@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useCart } from "@/context/CartContext";
 import CartDrawer from "./CartDrawer";
 import dbData from "@/lib/db.json";
+import { Search } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function Header() {
   const [scrolled, setScrolled] = useState(false);
@@ -16,6 +18,16 @@ export default function Header() {
   const { cartCount } = useCart();
   const [user, setUser] = useState<any>(null);
   const isAdmin = user && (user.email === 'admin@gulshanmodest.com' || user.user_metadata?.role === 'admin');
+  const [searchQuery, setSearchQuery] = useState("");
+  const router = useRouter();
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/shop?search=${encodeURIComponent(searchQuery.trim())}`);
+      setOpen(false);
+    }
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -112,6 +124,19 @@ export default function Header() {
         </nav>
  
         <div className="hidden lg:flex items-center gap-6">
+          <form onSubmit={handleSearch} className="relative hidden xl:block">
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-48 bg-[#FBF7F0] border border-[#e6e2db] rounded-full py-2 pl-4 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-gold transition-all"
+            />
+            <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-ink/50 hover:text-gold transition-colors">
+              <Search className="w-4 h-4" />
+            </button>
+          </form>
+
           <button
             onClick={() => setCartOpen(true)}
             className={`relative flex items-center justify-center h-11 w-11 rounded-full bg-gold text-white shadow-md hover:bg-emerald hover:scale-105 transition-all shrink-0`}

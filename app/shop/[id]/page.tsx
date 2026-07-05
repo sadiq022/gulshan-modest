@@ -2,6 +2,7 @@ import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import ProductDetailActions from './_components/ProductDetailActions'
 import ProductGallery from './_components/ProductGallery'
+import ProductReviews from './_components/ProductReviews'
 import Products from '@/components/Products'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -61,9 +62,28 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
 
   // Compile information
   let information = productData.product_information || []
+  if (productData.fabric) {
+    information.push({ label: 'Fabric Details', value: productData.fabric, display_order: -2 })
+  }
+  if (productData.stitching) {
+    information.push({ label: 'Stitching Details', value: productData.stitching, display_order: -1 })
+  }
   information.sort((a: any, b: any) => a.display_order - b.display_order)
 
   let faqs = productData.product_faqs || []
+  // Add a default FAQ if none exist just to populate the section as requested
+  if (faqs.length === 0) {
+    faqs.push({
+      question: "How long does shipping take?",
+      answer: "We typically process and ship orders within 2-3 business days. Delivery times vary based on your location.",
+      display_order: 1
+    })
+    faqs.push({
+      question: "What is your return policy?",
+      answer: "We offer a 7-day return policy for unused items in their original packaging.",
+      display_order: 2
+    })
+  }
   faqs.sort((a: any, b: any) => a.display_order - b.display_order)
 
   // Filter out inactive or out-of-stock variants if we want to be strict, 
@@ -92,6 +112,19 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     price: p.product_variants?.[0]?.price || 0,
     oldPrice: p.product_variants?.[0]?.original_price || undefined
   })) || [];
+
+  // Fetch Reviews
+  const { data: reviewsData } = await supabase
+    .from('reviews')
+    .select(`
+      id, rating, comment, created_at,
+      profiles:user_id ( full_name )
+    `)
+    .eq('product_id', productData.id)
+    .eq('is_approved', true)
+    .order('created_at', { ascending: false });
+
+  const reviews = reviewsData || [];
 
   return (
     <>
@@ -200,6 +233,11 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             </div>
           </div>
 
+        </div>
+
+        {/* Product Reviews */}
+        <div className="max-w-4xl mx-auto px-5 mt-20">
+          <ProductReviews productId={productData.id} initialReviews={reviews} />
         </div>
 
         {/* Similar Products */}
