@@ -244,7 +244,7 @@ export async function verifyRazorpayPayment(
 }
 
 export async function processCheckout(
-  profile: { fullName: string, phone: string, street: string, city: string, state: string, zipCode: string },
+  profile: { fullName: string, phone: string, alternatePhone?: string, street: string, city: string, state: string, zipCode: string },
   items: any[],
   paymentMethod: 'COD' | 'RAZORPAY',
   password?: string
@@ -320,6 +320,7 @@ export async function processCheckout(
     await supabase.from('addresses').update({
       full_name: profile.fullName,
       phone: profile.phone,
+      alternate_phone: profile.alternatePhone || null,
       address_line_1: profile.street,
       city: profile.city,
       state: profile.state,
@@ -333,6 +334,7 @@ export async function processCheckout(
       user_id: user.id,
       full_name: profile.fullName,
       phone: profile.phone,
+      alternate_phone: profile.alternatePhone || null,
       address_line_1: profile.street,
       city: profile.city,
       state: profile.state,

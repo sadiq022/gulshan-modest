@@ -8,6 +8,7 @@ import { useToast } from '@/context/ToastContext'
 type CustomerProfile = {
   fullName: string
   phone: string
+  alternatePhone: string
   street: string
   city: string
   state: string
@@ -18,6 +19,7 @@ export default function ProfileManager({ adminProfile, orders = [] }: { adminPro
   const [profile, setProfile] = useState<CustomerProfile>({
     fullName: '',
     phone: '',
+    alternatePhone: '',
     street: '',
     city: '',
     state: '',
@@ -32,6 +34,7 @@ export default function ProfileManager({ adminProfile, orders = [] }: { adminPro
       setProfile({
         fullName: adminProfile.full_name || '',
         phone: adminProfile.phone || '',
+        alternatePhone: adminProfile.alternatePhone || '',
         street: adminProfile.street || '',
         city: adminProfile.city || '',
         state: adminProfile.state || '',
@@ -116,6 +119,22 @@ export default function ProfileManager({ adminProfile, orders = [] }: { adminPro
                   required
                   value={profile.phone}
                   onChange={(e) => handleChange('phone', e.target.value)}
+                  placeholder="e.g. +91 98765 43210"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-cream-line bg-cream/20 text-ink focus:outline-none focus:ring-2 focus:ring-emerald/20 focus:border-emerald transition-all text-[15px]"
+                />
+                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-ink/30" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">
+                Alternate Phone Number <span className="text-ink/30 normal-case font-medium">(Optional)</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={profile.alternatePhone}
+                  onChange={(e) => handleChange('alternatePhone', e.target.value)}
                   placeholder="e.g. +91 98765 43210"
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-cream-line bg-cream/20 text-ink focus:outline-none focus:ring-2 focus:ring-emerald/20 focus:border-emerald transition-all text-[15px]"
                 />

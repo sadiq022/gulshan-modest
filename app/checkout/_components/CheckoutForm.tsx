@@ -25,6 +25,7 @@ export default function CheckoutForm({ shipping, isLoggedIn }: { shipping: Shipp
   const [profile, setProfile] = useState({
     fullName: '',
     phone: '',
+    alternatePhone: '',
     street: '',
     city: '',
     state: '',
@@ -57,6 +58,7 @@ export default function CheckoutForm({ shipping, isLoggedIn }: { shipping: Shipp
           setProfile({
             fullName: parsed.fullName || '',
             phone: parsed.phone || '',
+            alternatePhone: parsed.alternatePhone || '',
             street: parsed.street || '',
             city: parsed.city || '',
             state: parsed.state || '',
@@ -281,6 +283,21 @@ export default function CheckoutForm({ shipping, isLoggedIn }: { shipping: Shipp
                 title="Please enter exactly 10 digits"
                 value={profile.phone}
                 onChange={(e) => setProfile({ ...profile, phone: e.target.value.replace(/\D/g, '') })}
+                placeholder="e.g. 9876543210"
+                className="w-full px-4 py-2.5 rounded-xl border border-cream-line bg-cream/20 text-ink focus:outline-none focus:ring-2 focus:ring-emerald/20 focus:border-emerald transition-all text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">
+                Alternate Phone Number <span className="text-ink/30 normal-case font-medium">(Optional)</span>
+              </label>
+              <input
+                type="text"
+                maxLength={10}
+                pattern="\d{10}"
+                title="Please enter exactly 10 digits"
+                value={profile.alternatePhone}
+                onChange={(e) => setProfile({ ...profile, alternatePhone: e.target.value.replace(/\D/g, '') })}
                 placeholder="e.g. 9876543210"
                 className="w-full px-4 py-2.5 rounded-xl border border-cream-line bg-cream/20 text-ink focus:outline-none focus:ring-2 focus:ring-emerald/20 focus:border-emerald transition-all text-sm"
               />
