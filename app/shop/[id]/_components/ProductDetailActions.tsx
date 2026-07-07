@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { useCart } from '@/context/CartContext'
+import { useToast } from '@/context/ToastContext'
 import { useRouter } from 'next/navigation'
 import { SITE } from '@/lib/data'
 import { ShoppingBag, CreditCard, Plus, Minus } from 'lucide-react'
@@ -24,6 +25,7 @@ type ProductItem = {
 
 export default function ProductDetailActions({ product }: { product: ProductItem }) {
   const { addToCart, updateQuantity, cart } = useCart()
+  const { showToast } = useToast()
   const router = useRouter()
   const [quantity, setQuantity] = useState(1)
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
@@ -41,12 +43,12 @@ export default function ProductDetailActions({ product }: { product: ProductItem
 
   const handleAdd = () => {
     if (product.variants.length > 0 && !selectedVariant) {
-      alert("Please select a size/variant first.")
+      showToast("Please select a size/variant first.", "error")
       return
     }
 
     if (selectedVariant && selectedVariant.stock_quantity < quantity) {
-      alert("Not enough stock available for this variant.")
+      showToast("Not enough stock available for this variant.", "error")
       return
     }
 
@@ -61,7 +63,7 @@ export default function ProductDetailActions({ product }: { product: ProductItem
         variant_name: selectedVariant?.variant_name
       })
     }
-    alert(`${quantity} × ${product.name} added to cart successfully!`)
+    showToast(`${quantity} × ${product.name} added to cart successfully!`, "success")
   }
 
   const handleBuyNow = () => {
@@ -72,7 +74,7 @@ export default function ProductDetailActions({ product }: { product: ProductItem
   return (
     <div className="space-y-6">
       
-      {/* Dynamic Price & Quantity Display */}
+      {/* Dynamic Price Display */}
       <div className="flex items-center justify-between pt-3 border-t border-cream-line/50">
         <div className="flex items-baseline gap-3">
           <span className="font-display font-bold text-3xl text-emerald">
@@ -83,23 +85,6 @@ export default function ProductDetailActions({ product }: { product: ProductItem
               ₹{currentOldPrice.toLocaleString('en-IN')}
             </span>
           )}
-        </div>
-        
-        {/* Quantity control */}
-        <div className="flex items-center border border-cream-line bg-white rounded-full p-1 shadow-sm">
-          <button
-            onClick={() => setQuantity(q => Math.max(1, q - 1))}
-            className="p-1.5 hover:text-emerald text-ink/60 transition-colors rounded-full hover:bg-cream"
-          >
-            <Minus className="w-4 h-4" />
-          </button>
-          <span className="px-4 font-semibold text-ink text-sm">{quantity}</span>
-          <button
-            onClick={() => setQuantity(q => q + 1)}
-            className="p-1.5 hover:text-emerald text-ink/60 transition-colors rounded-full hover:bg-cream"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
         </div>
       </div>
 
@@ -145,6 +130,26 @@ export default function ProductDetailActions({ product }: { product: ProductItem
             </span>
           </div>
         )}
+
+        {/* Quantity control */}
+        <div className="flex items-center gap-4">
+          <span className="text-[13px] uppercase tracking-wider font-bold text-ink/70">Quantity</span>
+          <div className="flex items-center border border-cream-line bg-white rounded-full p-1 shadow-sm">
+            <button
+              onClick={() => setQuantity(q => Math.max(1, q - 1))}
+              className="p-1.5 hover:text-emerald text-ink/60 transition-colors rounded-full hover:bg-cream"
+            >
+              <Minus className="w-4 h-4" />
+            </button>
+            <span className="px-4 font-semibold text-ink text-sm">{quantity}</span>
+            <button
+              onClick={() => setQuantity(q => q + 1)}
+              className="p-1.5 hover:text-emerald text-ink/60 transition-colors rounded-full hover:bg-cream"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
           <button

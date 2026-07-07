@@ -17,6 +17,7 @@ type Product = {
   badge?: string
   rating: number
   is_active: boolean
+  colorCount?: number
 }
 
 type Category = {
@@ -198,6 +199,11 @@ export default function ShopGrid({ initialProducts, categories, selectedCategory
                           {p.name}
                         </h3>
                       </Link>
+                      {p.colorCount && p.colorCount > 1 && (
+                        <p className="mt-1 text-[11px] font-semibold text-emerald">
+                          {p.colorCount} colors available
+                        </p>
+                      )}
                     </div>
 
                     <div className="mt-2 flex items-center gap-2">

@@ -19,6 +19,34 @@ function slugify(text: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
+// Resolves the color_group_id to store for a product, given the "group with"
+// selection from the admin form (another product's ID to share colors with).
+async function resolveColorGroupId(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  groupWithProductId: string | null
+): Promise<string | null> {
+  if (!groupWithProductId) return null
+
+  const { data: target } = await supabase
+    .from('products')
+    .select('id, color_group_id')
+    .eq('id', groupWithProductId)
+    .single()
+
+  if (!target) return null
+
+  if (target.color_group_id) return target.color_group_id
+
+  // Target isn't in a group yet — create one and backfill it onto the target.
+  const newGroupId = crypto.randomUUID()
+  await supabase
+    .from('products')
+    .update({ color_group_id: newGroupId })
+    .eq('id', target.id)
+
+  return newGroupId
+}
+
 export async function createProduct(
   _prevState: ActionResult,
   formData: FormData
@@ -34,6 +62,9 @@ export async function createProduct(
   const seoTitle = formData.get('seo_title') as string
   const seoDescription = formData.get('seo_description') as string
   const badge = formData.get('badge') as string
+  const colorName = formData.get('color_name') as string
+  const colorHex = formData.get('color_hex') as string
+  const groupWith = (formData.get('group_with') as string) || null
   const isActive = formData.get('is_active') === 'on'
   const isFeatured = formData.get('is_featured') === 'on'
 
@@ -43,6 +74,7 @@ export async function createProduct(
 
   const slug = slugify(name)
   const id = crypto.randomUUID()
+  const colorGroupId = await resolveColorGroupId(supabase, groupWith)
 
   const { data: product, error } = await supabase.from('products').insert({
     id,
@@ -56,6 +88,9 @@ export async function createProduct(
     seo_title: seoTitle || null,
     seo_description: seoDescription || null,
     badge: badge || null,
+    color_name: colorName || null,
+    color_hex: colorHex || null,
+    color_group_id: colorGroupId,
     is_active: isActive,
     is_featured: isFeatured,
   }).select('id').single()
@@ -87,6 +122,9 @@ export async function updateProduct(
   const seoTitle = formData.get('seo_title') as string
   const seoDescription = formData.get('seo_description') as string
   const badge = formData.get('badge') as string
+  const colorName = formData.get('color_name') as string
+  const colorHex = formData.get('color_hex') as string
+  const groupWith = (formData.get('group_with') as string) || null
   const isActive = formData.get('is_active') === 'on'
   const isFeatured = formData.get('is_featured') === 'on'
 
@@ -95,6 +133,7 @@ export async function updateProduct(
   }
 
   const slug = slugify(name)
+  const colorGroupId = await resolveColorGroupId(supabase, groupWith)
 
   const { error } = await supabase
     .from('products')
@@ -109,6 +148,9 @@ export async function updateProduct(
       seo_title: seoTitle || null,
       seo_description: seoDescription || null,
       badge: badge || null,
+      color_name: colorName || null,
+      color_hex: colorHex || null,
+      color_group_id: colorGroupId,
       is_active: isActive,
       is_featured: isFeatured,
     })

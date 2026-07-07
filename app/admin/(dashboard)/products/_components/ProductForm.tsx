@@ -1,6 +1,6 @@
 'use client'
 
-import { useTransition, useActionState } from 'react'
+import { useTransition, useActionState, useState } from 'react'
 import {
   createProduct,
   updateProduct,
@@ -10,12 +10,15 @@ import Link from 'next/link'
 import { Save, ArrowLeft } from 'lucide-react'
 import type { Category, Product } from '@/types/database'
 
+type OtherProduct = Pick<Product, 'id' | 'name' | 'color_group_id' | 'color_name'>
+
 interface ProductFormProps {
   product?: Product
   categories: Category[]
+  otherProducts?: OtherProduct[]
 }
 
-export default function ProductForm({ product, categories }: ProductFormProps) {
+export default function ProductForm({ product, categories, otherProducts = [] }: ProductFormProps) {
   const isEditing = !!product
   const action = isEditing ? updateProduct : createProduct
 
@@ -24,6 +27,13 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
     {}
   )
   const [pending, startTransition] = useTransition()
+
+  // If this product already belongs to a color group, preselect a sibling
+  // from that same group as the "group with" default.
+  const currentSibling = product?.color_group_id
+    ? otherProducts.find((p) => p.color_group_id === product.color_group_id)
+    : undefined
+  const [colorHex, setColorHex] = useState(product?.color_hex || '#1E3B2E')
 
   return (
     <form
@@ -282,6 +292,86 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
               >
                 Featured — highlight on homepage
               </label>
+            </div>
+          </div>
+
+          {/* Color Variant */}
+          <div className="bg-white rounded-xl border border-stone-200/80 p-6 space-y-5">
+            <h2 className="text-base font-semibold text-stone-900">Color Variant</h2>
+            <p className="text-xs text-stone-400 -mt-3">
+              Link this product to another color of the same design so shoppers
+              see them as color options on one product page.
+            </p>
+
+            <div>
+              <label
+                htmlFor="product-color-name"
+                className="block text-sm font-medium text-stone-700 mb-1.5"
+              >
+                Color Name
+              </label>
+              <input
+                id="product-color-name"
+                name="color_name"
+                type="text"
+                maxLength={60}
+                defaultValue={product?.color_name || ''}
+                placeholder="e.g. Emerald Green"
+                className="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-white text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-all duration-200"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="product-color-hex"
+                className="block text-sm font-medium text-stone-700 mb-1.5"
+              >
+                Swatch Color
+              </label>
+              <div className="flex items-center gap-2.5">
+                <input
+                  id="product-color-hex"
+                  type="color"
+                  value={colorHex}
+                  onChange={(e) => setColorHex(e.target.value)}
+                  className="w-11 h-11 rounded-lg border border-stone-200 cursor-pointer shrink-0 p-0.5"
+                />
+                <input
+                  name="color_hex"
+                  type="text"
+                  value={colorHex}
+                  onChange={(e) => setColorHex(e.target.value)}
+                  maxLength={7}
+                  className="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-white text-stone-900 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-all duration-200"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="product-group-with"
+                className="block text-sm font-medium text-stone-700 mb-1.5"
+              >
+                Group With
+              </label>
+              <select
+                id="product-group-with"
+                name="group_with"
+                defaultValue={currentSibling?.id || ''}
+                className="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-white text-stone-900 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-all duration-200"
+              >
+                <option value="">Standalone — no color group</option>
+                {otherProducts.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                    {p.color_name ? ` (${p.color_name})` : ''}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-stone-400 mt-1.5">
+                Pick any product that's already this design in another color —
+                they'll all be linked as one color group automatically.
+              </p>
             </div>
           </div>
         </div>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
+import { ToastProvider } from "@/context/ToastContext";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -48,9 +49,11 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${jakarta.variable} ${bricolage.variable}`}>
       <body className="font-body bg-cream text-ink antialiased">
-        <CartProvider>
-          {children}
-        </CartProvider>
+        <ToastProvider>
+          <CartProvider>
+            {children}
+          </CartProvider>
+        </ToastProvider>
       </body>
     </html>
   );

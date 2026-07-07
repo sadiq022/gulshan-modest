@@ -58,6 +58,9 @@ export interface Product {
   description: string | null
   featured_image_url: string | null
   badge: string | null
+  color_group_id: string | null
+  color_name: string | null
+  color_hex: string | null
   average_rating: number
   review_count: number
   is_active: boolean

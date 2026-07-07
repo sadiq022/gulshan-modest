@@ -11,9 +11,9 @@ export async function middleware(request: NextRequest) {
   const loggedIn = hasMockCookie || hasSupabaseCookie
 
   // Protected paths
-  const isProtectedPath =
-    request.nextUrl.pathname.startsWith('/account') ||
-    request.nextUrl.pathname.startsWith('/checkout')
+  // Note: /checkout is intentionally not gated here — it collects the
+  // address and creates/logs the account inline as part of the form.
+  const isProtectedPath = request.nextUrl.pathname.startsWith('/account')
   const isAdminPath =
     request.nextUrl.pathname.startsWith('/admin') &&
     request.nextUrl.pathname !== '/admin/login'
@@ -23,7 +23,7 @@ export async function middleware(request: NextRequest) {
     if (isAdminPath) {
       url.pathname = '/admin/login'
     } else {
-      url.pathname = '/admin/login' // fallback to admin login for now
+      url.pathname = '/login'
       url.searchParams.set('redirect', request.nextUrl.pathname)
     }
     return NextResponse.redirect(url)

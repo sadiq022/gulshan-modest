@@ -246,10 +246,63 @@ export async function verifyRazorpayPayment(
 export async function processCheckout(
   profile: { fullName: string, phone: string, street: string, city: string, state: string, zipCode: string },
   items: any[],
-  paymentMethod: 'COD' | 'RAZORPAY'
+  paymentMethod: 'COD' | 'RAZORPAY',
+  password?: string
 ) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  let { data: { user } } = await supabase.auth.getUser()
+
+  // Guest checkout: create (or sign into) their account inline using the
+  // phone number + password collected on the checkout form, so they don't
+  // have to leave the page to log in first.
+  if (!user) {
+    if (!password) return { success: false, error: 'Please set a password to create your account.' }
+
+    const cleanPhone = profile.phone.replace(/\D/g, '')
+    if (cleanPhone.length < 10) {
+      return { success: false, error: 'Please enter a valid phone number.' }
+    }
+    const syntheticEmail = `user${cleanPhone}@gulshanmodest.com`
+
+    const { createAdminClient } = await import('@/lib/supabase/admin')
+    const adminAuth = createAdminClient().auth.admin
+
+    const { error: createError } = await adminAuth.createUser({
+      email: syntheticEmail,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: profile.fullName,
+        phone: cleanPhone,
+        role: 'customer',
+      },
+    })
+
+    if (createError && !createError.message.includes('already been registered')) {
+      return { success: false, error: createError.message }
+    }
+
+    // Either newly created, or an account already exists for this phone —
+    // sign in with the given password either way (treats existing accounts
+    // as a login).
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: syntheticEmail,
+      password,
+    })
+
+    if (signInError) {
+      return {
+        success: false,
+        error: createError
+          ? 'An account with this phone number already exists. Please enter the correct password.'
+          : 'Account created but failed to log in automatically.',
+      }
+    }
+
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  }
+
   if (!user) return { success: false, error: 'You must be logged in to checkout.' }
 
   // 1. Create or get address

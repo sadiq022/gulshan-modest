@@ -22,7 +22,7 @@ export default async function ShopPage({
   let productsQuery = supabase
     .from("products")
     .select(`
-      id, name, slug, category_id, is_active, badge, rating, price, oldPrice, featured_image_url,
+      id, name, slug, category_id, is_active, badge, rating, price, oldPrice, featured_image_url, color_group_id,
       product_images ( image_url ),
       product_variants ( price, original_price )
     `)
@@ -39,6 +39,11 @@ export default async function ShopPage({
     .select("*")
     .eq("is_active", true);
 
+  const colorGroupCounts = (productsData || []).reduce((acc: any, p: any) => {
+    if (p.color_group_id) acc[p.color_group_id] = (acc[p.color_group_id] || 0) + 1;
+    return acc;
+  }, {});
+
   const products = (productsData || []).map((p: any) => ({
     id: p.id,
     name: p.name,
@@ -49,6 +54,7 @@ export default async function ShopPage({
     oldPrice: p.product_variants?.[0]?.original_price || p.oldPrice || undefined,
     badge: p.badge,
     rating: p.rating || 5,
+    colorCount: p.color_group_id ? colorGroupCounts[p.color_group_id] || 1 : 1,
   }));
 
   const categories = categoriesData || [];
@@ -85,7 +91,7 @@ export default async function ShopPage({
           </div>
         </section>
 
-        <div className="max-w-[1400px] mx-auto px-5 md:px-8 py-10 md:py-16">
+        <div className="max-w-wrap mx-auto px-5 md:px-8 py-10 md:py-16">
 
           <ShopGrid 
             initialProducts={products} 

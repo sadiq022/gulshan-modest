@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { User, Phone, MapPin, CheckCircle, Package } from 'lucide-react'
 import { updateAdminProfile } from '@/actions/admin/profile'
+import { useToast } from '@/context/ToastContext'
 
 type CustomerProfile = {
   fullName: string
@@ -23,6 +24,7 @@ export default function ProfileManager({ adminProfile, orders = [] }: { adminPro
     zipCode: '',
   })
   const [saved, setSaved] = useState(false)
+  const { showToast } = useToast()
 
   // Load profile data on mount
   useEffect(() => {
@@ -58,7 +60,7 @@ export default function ProfileManager({ adminProfile, orders = [] }: { adminPro
       
       const res = await updateAdminProfile(formData)
       if (res.error) {
-        alert(res.error)
+        showToast(res.error, 'error')
         return
       }
     }

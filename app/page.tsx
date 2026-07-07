@@ -31,14 +31,19 @@ export default async function Home() {
     .select("*")
     .eq("is_active", true);
 
-  // Fetch product counts per category
+  // Fetch product counts per category, and color-group sizes for "N colors available" badges
   const { data: allProducts } = await supabase
     .from("products")
-    .select("category_id")
+    .select("category_id, color_group_id")
     .eq("is_active", true);
 
   const productCounts = (allProducts || []).reduce((acc: any, p: any) => {
     acc[p.category_id] = (acc[p.category_id] || 0) + 1;
+    return acc;
+  }, {});
+
+  const colorGroupCounts = (allProducts || []).reduce((acc: any, p: any) => {
+    if (p.color_group_id) acc[p.color_group_id] = (acc[p.color_group_id] || 0) + 1;
     return acc;
   }, {});
 
@@ -52,7 +57,7 @@ export default async function Home() {
   const { data: products } = await supabase
     .from("products")
     .select(`
-      id, name, slug, category_id, is_featured, is_active,
+      id, name, slug, category_id, is_featured, is_active, color_group_id,
       product_images ( image_url ),
       product_variants ( price, original_price )
     `)
@@ -71,13 +76,14 @@ export default async function Home() {
     oldPrice: p.product_variants?.[0]?.original_price || p.oldPrice || undefined,
     badge: p.badge,
     rating: p.rating || 5,
+    colorCount: p.color_group_id ? colorGroupCounts[p.color_group_id] || 1 : 1,
   }));
 
   // Fetch Luxe Salwar Kameez products for the dedicated homepage highlight
   const { data: salwarKameezProducts } = await supabase
     .from("products")
     .select(`
-      id, name, price, oldPrice, badge, rating, featured_image_url,
+      id, name, price, oldPrice, badge, rating, featured_image_url, color_group_id,
       product_images ( image_url ),
       product_variants ( price, original_price )
     `)
@@ -94,6 +100,7 @@ export default async function Home() {
     oldPrice: p.product_variants?.[0]?.original_price || p.oldPrice || undefined,
     badge: p.badge,
     rating: p.rating || 5,
+    colorCount: p.color_group_id ? colorGroupCounts[p.color_group_id] || 1 : 1,
   }));
 
   return (

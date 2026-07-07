@@ -2,12 +2,13 @@
 
 import React, { useState, useTransition } from 'react'
 import { login, register } from '@/actions/auth'
-import { Loader2, Phone, Lock, User, Mail, ArrowRight } from 'lucide-react'
+import { Loader2, Phone, Lock, User, Mail, ArrowRight, Eye, EyeOff } from 'lucide-react'
 
-export default function AuthForm() {
+export default function AuthForm({ redirectTo }: { redirectTo?: string }) {
   const [mode, setMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN')
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -38,6 +39,7 @@ export default function AuthForm() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {redirectTo && <input type="hidden" name="redirect_to" value={redirectTo} />}
         {mode === 'REGISTER' && (
           <div>
             <label htmlFor="full_name" className="block text-sm font-medium text-ink/70 mb-1">
@@ -100,13 +102,21 @@ export default function AuthForm() {
             <input
               id="password"
               name="password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               required
               minLength={6}
-              className="w-full pl-10 pr-4 py-3 rounded-xl border border-cream-line bg-cream focus:outline-none focus:border-gold transition-colors"
+              className="w-full pl-10 pr-11 py-3 rounded-xl border border-cream-line bg-cream focus:outline-none focus:border-gold transition-colors"
               placeholder="••••••••"
             />
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-ink/40" />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-ink/40 hover:text-ink/70 transition-colors"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            </button>
           </div>
         </div>
 

@@ -7,7 +7,13 @@ export const metadata = {
   description: 'Login securely with your phone number and password.',
 }
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ redirect?: string }>
+}) {
+  const { redirect } = await searchParams
+
   return (
     <>
       <Header />
@@ -19,7 +25,7 @@ export default function LoginPage() {
               Log in or create an account to track orders and checkout faster.
             </p>
           </div>
-          <AuthForm />
+          <AuthForm redirectTo={redirect} />
         </div>
       </main>
       <Footer />

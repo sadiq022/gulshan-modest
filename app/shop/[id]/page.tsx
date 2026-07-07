@@ -17,7 +17,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   let { data: productData } = await supabase
     .from("products")
     .select(`
-      id, name, slug, category_id, is_active, badge, rating, short_description, description, fabric, stitching, featured_image_url,
+      id, name, slug, category_id, is_active, badge, rating, short_description, description, fabric, stitching, featured_image_url, color_group_id, color_name, color_hex,
       product_images ( image_url ),
       product_variants ( id, variant_name, price, original_price, stock_quantity ),
       product_information ( label, value, display_order ),
@@ -30,7 +30,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     const { data: slugProduct } = await supabase
       .from("products")
       .select(`
-        id, name, slug, category_id, is_active, badge, rating, short_description, description, fabric, stitching, featured_image_url,
+        id, name, slug, category_id, is_active, badge, rating, short_description, description, fabric, stitching, featured_image_url, color_group_id, color_name, color_hex,
         product_images ( image_url ),
         product_variants ( id, variant_name, price, original_price, stock_quantity ),
         product_information ( label, value, display_order ),
@@ -86,9 +86,31 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   }
   faqs.sort((a: any, b: any) => a.display_order - b.display_order)
 
-  // Filter out inactive or out-of-stock variants if we want to be strict, 
+  // Filter out inactive or out-of-stock variants if we want to be strict,
   // but let's just pass them down and disable out-of-stock ones
   const variants = productData.product_variants || []
+
+  // Fetch other colors of this same design (color group)
+  let colorOptions: any[] = []
+  if (productData.color_group_id) {
+    const { data: colorGroupProducts } = await supabase
+      .from("products")
+      .select(`
+        id, name, color_name, color_hex, featured_image_url,
+        product_images ( image_url )
+      `)
+      .eq("color_group_id", productData.color_group_id)
+      .eq("is_active", true)
+      .order("created_at", { ascending: true })
+
+    colorOptions = (colorGroupProducts || []).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      color_name: p.color_name,
+      color_hex: p.color_hex,
+      image_url: p.product_images?.[0]?.image_url || p.featured_image_url || "/image.png",
+    }))
+  }
 
   // Fetch similar products
   const { data: similarProductsData } = await supabase
@@ -130,8 +152,8 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     <>
       <Header />
       <main className="min-h-screen bg-cream pt-28 pb-16 md:pt-36 md:pb-24">
-        <div className="max-w-6xl mx-auto px-5">
-          
+        <div className="max-w-wrap mx-auto px-5 md:px-8">
+
           {/* Breadcrumbs */}
           <div className="flex items-center gap-1.5 text-xs text-ink/50 font-medium mb-8">
             <Link href="/" className="hover:text-emerald transition-colors">Home</Link>
@@ -168,6 +190,35 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                   </div>
                 )}
               </div>
+
+              {/* Color Options */}
+              {colorOptions.length > 1 && (
+                <div>
+                  <p className="text-[13px] uppercase tracking-wider font-bold text-ink/70 mb-3">
+                    Color{productData.color_name ? ` — ${productData.color_name}` : ''}
+                    <span className="ml-1.5 font-semibold normal-case text-emerald">
+                      ({colorOptions.length} colors available)
+                    </span>
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    {colorOptions.map((c) => (
+                      <Link
+                        key={c.id}
+                        href={`/shop/${c.id}`}
+                        title={c.color_name || c.name}
+                        className={`relative w-11 h-11 rounded-full border-2 overflow-hidden shrink-0 transition-all ${
+                          c.id === productData.id
+                            ? 'border-emerald scale-110 shadow-sm'
+                            : 'border-cream-line hover:border-emerald/50'
+                        }`}
+                        style={{ backgroundColor: c.color_hex || '#E6DAC4' }}
+                      >
+                        <span className="sr-only">{c.color_name || c.name}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Purchase Actions client-side wrapper (includes dynamic price and Add to cart) */}
               <ProductDetailActions 
@@ -235,22 +286,32 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
 
         </div>
 
-        {/* Product Reviews */}
-        <div className="max-w-4xl mx-auto px-5 mt-20">
-          <ProductReviews productId={productData.id} initialReviews={reviews} />
-        </div>
-
         {/* Similar Products */}
         {similarProducts.length > 0 && (
           <div className="mt-20 pt-10 border-t border-cream-line">
-            <Products 
-              products={similarProducts} 
-              categories={[{ id: productData.category_id, name: categoryName }]} 
+            <Products
+              products={similarProducts}
+              categories={[{ id: productData.category_id, name: categoryName }]}
               title="You might also like"
               subtitle="Explore similar styles from this collection."
             />
           </div>
         )}
+
+        {/* Product Reviews */}
+        <section className="mt-20 pt-10 border-t border-cream-line bg-cream">
+          <div className="max-w-wrap mx-auto px-5 md:px-8">
+            <div className="text-center max-w-xl mx-auto mb-10">
+              <div className="eyebrow justify-center inline-flex items-center gap-2">
+                <span className="h-px w-6 bg-gold" />
+                Customer Voices
+                <span className="h-px w-6 bg-gold" />
+              </div>
+              <h2 className="section-heading mt-4">Ratings &amp; Reviews</h2>
+            </div>
+            <ProductReviews productId={productData.id} initialReviews={reviews} />
+          </div>
+        </section>
       </main>
       <Footer />
     </>

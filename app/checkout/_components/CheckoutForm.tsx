@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect, useTransition } from 'react'
 import { useCart } from '@/context/CartContext'
+import { useToast } from '@/context/ToastContext'
 import { validateCoupon } from '@/actions/admin/coupons'
 import { processCheckout, verifyRazorpayPayment } from '@/actions/checkout'
 import { SITE } from '@/lib/data'
-import { Truck, Tag, CreditCard, ShoppingBag, ShieldCheck, CheckCircle2 } from 'lucide-react'
+import { Truck, Tag, CreditCard, ShoppingBag, ShieldCheck, CheckCircle2, Lock, Eye, EyeOff, Plus, Minus, X } from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
 import Script from 'next/script'
 
 type ShippingSettings = {
@@ -14,10 +16,11 @@ type ShippingSettings = {
   free_threshold: number
 }
 
-export default function CheckoutForm({ shipping }: { shipping: ShippingSettings }) {
-  const { cart, cartTotal, clearCart } = useCart()
+export default function CheckoutForm({ shipping, isLoggedIn }: { shipping: ShippingSettings, isLoggedIn: boolean }) {
+  const { cart, cartTotal, clearCart, updateQuantity, removeFromCart } = useCart()
+  const { showToast } = useToast()
   const [pending, startTransition] = useTransition()
-  
+
   // Shipping Address Form State
   const [profile, setProfile] = useState({
     fullName: '',
@@ -27,6 +30,10 @@ export default function CheckoutForm({ shipping }: { shipping: ShippingSettings 
     state: '',
     zipCode: '',
   })
+
+  // Inline account creation (only shown for guests)
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
   // Coupon State
   const [couponCode, setCouponCode] = useState('')
@@ -78,8 +85,7 @@ export default function CheckoutForm({ shipping }: { shipping: ShippingSettings 
   const grandTotal = Math.max(0, subtotal + shippingFee - discount)
 
   // Handle Coupon Apply
-  const handleApplyCoupon = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleApplyCoupon = async () => {
     setCouponError('')
     setCouponSuccess('')
 
@@ -123,7 +129,7 @@ export default function CheckoutForm({ shipping }: { shipping: ShippingSettings 
           })
           clearCart()
         } else {
-          alert('Payment verification failed. Please contact support.')
+          showToast('Payment verification failed. Please contact support.', 'error')
         }
       },
       prefill: {
@@ -138,7 +144,7 @@ export default function CheckoutForm({ shipping }: { shipping: ShippingSettings 
     // @ts-ignore
     const rzp1 = new window.Razorpay(options);
     rzp1.on('payment.failed', function (response: any){
-        alert("Payment failed! Reason: " + response.error.description);
+        showToast("Payment failed! Reason: " + response.error.description, "error");
     });
     rzp1.open();
   }
@@ -147,18 +153,23 @@ export default function CheckoutForm({ shipping }: { shipping: ShippingSettings 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (cart.length === 0) {
-      alert('Your cart is empty')
+      showToast('Your cart is empty', 'error')
+      return
+    }
+
+    if (!isLoggedIn && password.length < 6) {
+      showToast('Please set a password (at least 6 characters) to create your account.', 'error')
       return
     }
 
     startTransition(async () => {
       const addressString = `${profile.street}, ${profile.city}, ${profile.state} - ${profile.zipCode}`
       const method = paymentMethod === 'Online Payment (Razorpay)' ? 'RAZORPAY' : 'COD'
-      
-      const res = await processCheckout(profile, cart, method)
+
+      const res = await processCheckout(profile, cart, method, isLoggedIn ? undefined : password)
 
       if (!res.success) {
-        alert(res.error || 'Failed to place order.')
+        showToast(res.error || 'Failed to place order.', 'error')
       } else {
         if (res.isRazorpay) {
           handleRazorpayPayment(res, addressString)
@@ -234,10 +245,10 @@ export default function CheckoutForm({ shipping }: { shipping: ShippingSettings 
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+    <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       {/* Left Column: Shipping Address & Payment Form */}
-      <form onSubmit={handleSubmit} className="lg:col-span-7 space-y-6">
+      <div className="lg:col-span-7 space-y-6">
         <div className="bg-white rounded-3xl p-6 md:p-8 border border-cream-line shadow-card space-y-6">
           <h2 className="text-lg font-bold text-ink uppercase tracking-wider flex items-center gap-2">
             <Truck className="w-5 h-5 text-gold" /> Shipping Details
@@ -342,6 +353,41 @@ export default function CheckoutForm({ shipping }: { shipping: ShippingSettings 
           </div>
         </div>
 
+        {!isLoggedIn && (
+          <div className="bg-white rounded-3xl p-6 md:p-8 border border-cream-line shadow-card space-y-4">
+            <h2 className="text-lg font-bold text-ink uppercase tracking-wider flex items-center gap-2">
+              <Lock className="w-5 h-5 text-gold" /> Create Your Account
+            </h2>
+            <p className="text-xs text-ink/50 -mt-2">
+              We'll set up an account with your phone number ({profile.phone || '—'}) so you can track this order. Just set a password below.
+            </p>
+            <div>
+              <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Set a password for your account"
+                  className="w-full px-4 py-2.5 pr-11 rounded-xl border border-cream-line bg-cream/20 text-ink focus:outline-none focus:ring-2 focus:ring-emerald/20 focus:border-emerald transition-all text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-ink/40 hover:text-ink/70 transition-colors"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-3xl p-6 md:p-8 border border-cream-line shadow-card space-y-6">
           <h2 className="text-lg font-bold text-ink uppercase tracking-wider flex items-center gap-2">
             <CreditCard className="w-5 h-5 text-gold" /> Payment Option
@@ -381,52 +427,75 @@ export default function CheckoutForm({ shipping }: { shipping: ShippingSettings 
             </label>
           </div>
         </div>
+      </div>
 
-        <button
-          type="submit"
-          disabled={pending || cart.length === 0}
-          className="w-full py-4 px-4 bg-emerald text-cream font-body font-semibold rounded-full shadow-card hover:bg-emerald-deep transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          {pending ? (
-            <div className="w-5 h-5 border-2 border-cream/30 border-t-cream rounded-full animate-spin" />
-          ) : (
-            <>
-              <ShieldCheck className="w-5 h-5" />
-              Place Secure Order — ₹{grandTotal.toLocaleString('en-IN')}
-            </>
-          )}
-        </button>
-      </form>
-
-      {/* Right Column: Order Summary & Coupon Codes */}
-      <div className="lg:col-span-5 space-y-6">
+      {/* Right Column: Order Summary & Coupon Codes (sticky so the order + Place Order button stay in view) */}
+      <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-28 lg:self-start">
         {/* Order Summary */}
         <div className="bg-white rounded-3xl p-6 border border-cream-line shadow-card space-y-6">
           <h2 className="text-lg font-bold text-ink uppercase tracking-wider flex items-center gap-2">
             <ShoppingBag className="w-5 h-5 text-gold" /> Order Summary
           </h2>
 
-          <div className="divide-y divide-cream-line max-h-60 overflow-y-auto pr-1">
+          <div className="divide-y divide-cream-line max-h-80 overflow-y-auto pr-1">
             {cart.length === 0 ? (
               <p className="text-sm text-ink/50 py-4">Your cart is empty.</p>
             ) : (
               cart.map((item) => (
-                <div key={item.id} className="flex gap-3 py-3 items-center">
-                  <div className="relative w-12 h-14 rounded-lg overflow-hidden shrink-0 border border-cream-line/50">
+                <div key={item.cartItemId} className="flex gap-4 py-4 items-start">
+                  <Link
+                    href={`/shop/${item.id}`}
+                    className="relative w-20 h-24 rounded-xl overflow-hidden shrink-0 border border-cream-line/50 hover:opacity-90 transition-opacity"
+                  >
                     <Image
                       src={item.image_url}
                       alt={item.name}
                       fill
                       className="object-cover"
                     />
+                  </Link>
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <Link href={`/shop/${item.id}`} className="hover:text-emerald transition-colors">
+                        <h4 className="font-semibold text-ink text-sm leading-snug line-clamp-2">{item.name}</h4>
+                      </Link>
+                      <span className="font-semibold text-emerald text-base shrink-0">
+                        ₹{(item.price * item.quantity).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-ink/40">
+                      {item.variant_name ? `${item.variant_name} • ` : ''}₹{item.price} each
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center border border-cream-line rounded-full p-0.5">
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(item.cartItemId, item.quantity - 1)}
+                          className="p-1 text-ink/60 hover:text-emerald rounded-full hover:bg-cream transition-colors"
+                          aria-label="Decrease quantity"
+                        >
+                          <Minus className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="px-3 text-sm font-semibold text-ink">{item.quantity}</span>
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(item.cartItemId, item.quantity + 1)}
+                          className="p-1 text-ink/60 hover:text-emerald rounded-full hover:bg-cream transition-colors"
+                          aria-label="Increase quantity"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeFromCart(item.cartItemId)}
+                        className="text-ink/30 hover:text-red-500 transition-colors"
+                        aria-label="Remove item"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-ink text-xs truncate">{item.name}</h4>
-                    <p className="text-[10px] text-ink/50">Qty: {item.quantity} × ₹{item.price}</p>
-                  </div>
-                  <span className="font-semibold text-emerald text-sm">
-                    ₹{(item.price * item.quantity).toLocaleString('en-IN')}
-                  </span>
                 </div>
               ))
             )}
@@ -455,6 +524,21 @@ export default function CheckoutForm({ shipping }: { shipping: ShippingSettings 
               <span className="font-display font-bold text-lg text-emerald">₹{grandTotal.toLocaleString('en-IN')}</span>
             </div>
           </div>
+
+          <button
+            type="submit"
+            disabled={pending || cart.length === 0}
+            className="w-full py-4 px-4 bg-emerald text-cream font-body font-semibold rounded-full shadow-card hover:bg-emerald-deep transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {pending ? (
+              <div className="w-5 h-5 border-2 border-cream/30 border-t-cream rounded-full animate-spin" />
+            ) : (
+              <>
+                <ShieldCheck className="w-5 h-5" />
+                Place Secure Order — ₹{grandTotal.toLocaleString('en-IN')}
+              </>
+            )}
+          </button>
         </div>
 
         {/* Coupons Form */}
@@ -463,21 +547,28 @@ export default function CheckoutForm({ shipping }: { shipping: ShippingSettings 
             <Tag className="w-4 h-4 text-gold" /> Have a Coupon?
           </h3>
 
-          <form onSubmit={handleApplyCoupon} className="flex gap-2">
+          <div className="flex gap-2">
             <input
               type="text"
               value={couponCode}
               onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  handleApplyCoupon()
+                }
+              }}
               placeholder="e.g. EID50, WELCOME100"
               className="flex-1 px-3.5 py-2 rounded-xl border border-cream-line bg-cream/20 text-ink focus:outline-none focus:ring-2 focus:ring-emerald/20 focus:border-emerald transition-all text-xs uppercase"
             />
             <button
-              type="submit"
+              type="button"
+              onClick={handleApplyCoupon}
               className="px-4 py-2 bg-emerald hover:bg-emerald-deep text-cream text-xs font-bold rounded-xl transition-all"
             >
               Apply
             </button>
-          </form>
+          </div>
 
           {couponError && <p className="text-xs text-red-500">{couponError}</p>}
           {couponSuccess && <p className="text-xs text-emerald font-semibold">{couponSuccess}</p>}
@@ -488,6 +579,6 @@ export default function CheckoutForm({ shipping }: { shipping: ShippingSettings 
           </div>
         </div>
       </div>
-    </div>
+    </form>
   )
 }

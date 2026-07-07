@@ -108,6 +108,15 @@ body {
   animation: gold-shimmer 7s ease-in-out infinite alternate;
 }
 
+/* ---- Toast / fade-in entrance ---- */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fade-in 0.25s ease-out;
+}
+
 /* ---- Card hover lift ---- */
 .lift {
   transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.45s cubic-bezier(0.22, 1, 0.36, 1);

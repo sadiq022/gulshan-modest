@@ -14,6 +14,7 @@ interface Product {
   rating?: number;
   price: number;
   oldPrice?: number;
+  colorCount?: number;
 }
 
 function formatINR(n: number) {
@@ -69,6 +70,11 @@ export default function LuxeSalwarKameez({ products = [] }: { products?: Product
                         {p.name}
                       </h3>
                     </Link>
+                    {p.colorCount && p.colorCount > 1 && (
+                      <p className="mt-1 text-[11px] font-semibold text-emerald">
+                        {p.colorCount} colors available
+                      </p>
+                    )}
                   </div>
                   <div className="mt-2 flex items-center gap-2">
                     <span className="font-display font-bold text-ink text-[14px] md:text-base">

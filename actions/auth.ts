@@ -34,8 +34,9 @@ export async function login(
     return { error: 'Invalid phone number or password' }
   }
 
+  const redirectTo = formData.get('redirect_to') as string
   revalidatePath('/', 'layout')
-  redirect('/')
+  redirect(redirectTo && redirectTo.startsWith('/') ? redirectTo : '/')
 }
 
 export async function register(
@@ -96,8 +97,9 @@ export async function register(
     return { error: 'Account created but failed to log in automatically.' }
   }
 
+  const redirectTo = formData.get('redirect_to') as string
   revalidatePath('/', 'layout')
-  redirect('/')
+  redirect(redirectTo && redirectTo.startsWith('/') ? redirectTo : '/')
 }
 
 export async function adminLogin(
