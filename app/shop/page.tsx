@@ -12,24 +12,30 @@ export const metadata = {
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams: { category?: string; search?: string }
+  searchParams: { category?: string; search?: string; featured?: string }
 }) {
   const supabase = await createClient();
 
   const resolvedSearchParams = await searchParams;
   const searchQuery = resolvedSearchParams.search || '';
+  const featuredOnly = resolvedSearchParams.featured === 'true';
 
   let productsQuery = supabase
     .from("products")
     .select(`
-      id, name, slug, category_id, is_active, badge, rating, price, oldPrice, featured_image_url, color_group_id,
+      id, name, slug, category_id, is_active, badge, rating, price, oldPrice, featured_image_url, color_group_id, created_at,
       product_images ( image_url ),
       product_variants ( price, original_price )
     `)
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .order('created_at', { ascending: false });
 
   if (searchQuery) {
     productsQuery = productsQuery.ilike('name', `%${searchQuery}%`);
+  }
+
+  if (featuredOnly) {
+    productsQuery = productsQuery.eq('is_featured', true);
   }
 
   const { data: productsData } = await productsQuery;

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ArrowLeft, User, MapPin, Package, CreditCard } from 'lucide-react'
 import { OrderStatusManager } from '../_components/OrderStatusManager'
 
@@ -18,7 +19,7 @@ export default async function AdminOrderDetailsPage({
   const supabase = await createClient()
 
   // Fetch Order Details
-  const { data: order } = await supabase
+  const { data: order, error: orderError } = await supabase
     .from('orders')
     .select(`
       *,
@@ -30,8 +31,8 @@ export default async function AdminOrderDetailsPage({
       addresses:address_id (
         full_name,
         phone,
+        alternate_phone,
         address_line_1,
-        address_line_2,
         city,
         state,
         postal_code
@@ -41,8 +42,32 @@ export default async function AdminOrderDetailsPage({
     .eq('id', orderId)
     .single()
 
+  if (orderError) {
+    console.error('Failed to load order', orderId, orderError)
+  }
+
   if (!order) {
     notFound()
+  }
+
+  // order_items.product_id has no DB foreign key to products (some legacy/mock
+  // rows may not resolve), so look products up separately rather than embedding.
+  const productIds = Array.from(new Set((order.order_items || []).map((item: any) => item.product_id).filter(Boolean)))
+
+  let productsById: Record<string, { image_url: string; is_active: boolean }> = {}
+  if (productIds.length > 0) {
+    const { data: productsData } = await supabase
+      .from('products')
+      .select('id, is_active, featured_image_url, product_images ( image_url )')
+      .in('id', productIds)
+
+    productsById = (productsData || []).reduce((acc: any, p: any) => {
+      acc[p.id] = {
+        image_url: p.product_images?.[0]?.image_url || p.featured_image_url || null,
+        is_active: p.is_active,
+      }
+      return acc
+    }, {})
   }
 
   return (
@@ -93,9 +118,11 @@ export default async function AdminOrderDetailsPage({
                 <div className="space-y-1 text-sm text-stone-600">
                   <p className="font-medium text-stone-900 mb-1">{order.addresses.full_name}</p>
                   <p>{order.addresses.address_line_1}</p>
-                  {order.addresses.address_line_2 && <p>{order.addresses.address_line_2}</p>}
                   <p>{order.addresses.city}, {order.addresses.state} {order.addresses.postal_code}</p>
                   <p className="mt-2 pt-2 border-t border-stone-100">Phone: {order.addresses.phone}</p>
+                  {order.addresses.alternate_phone && (
+                    <p>Alternate: {order.addresses.alternate_phone}</p>
+                  )}
                 </div>
               ) : (
                 <p className="text-sm text-stone-500 italic">No address details available.</p>
@@ -115,21 +142,59 @@ export default async function AdminOrderDetailsPage({
                   <tr>
                     <th className="px-6 py-4 font-semibold">Product</th>
                     <th className="px-6 py-4 font-semibold">Variant</th>
-                    <th className="px-6 py-4 font-semibold">Price</th>
+                    <th className="px-6 py-4 font-semibold">Product ID</th>
+                    <th className="px-6 py-4 font-semibold">Unit Price</th>
                     <th className="px-6 py-4 font-semibold">Qty</th>
                     <th className="px-6 py-4 font-semibold text-right">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100">
-                  {order.order_items?.map((item: any) => (
-                    <tr key={item.id} className="hover:bg-stone-50/50 transition-colors">
-                      <td className="px-6 py-4 font-medium text-stone-900">{item.product_name}</td>
-                      <td className="px-6 py-4 text-stone-600">{item.variant_name}</td>
-                      <td className="px-6 py-4 text-stone-600">₹{item.price_at_purchase}</td>
-                      <td className="px-6 py-4 text-stone-600">{item.quantity}</td>
-                      <td className="px-6 py-4 font-medium text-stone-900 text-right">₹{item.line_total}</td>
-                    </tr>
-                  ))}
+                  {order.order_items?.map((item: any) => {
+                    const product = item.product_id ? productsById[item.product_id] : null
+                    const href = product?.is_active ? `/shop/${item.product_id}` : null
+
+                    const thumbnail = (
+                      <div className="relative w-12 h-14 rounded-lg overflow-hidden shrink-0 border border-stone-200 bg-stone-100">
+                        {product?.image_url ? (
+                          <Image src={product.image_url} alt={item.product_name} fill className="object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-stone-300 text-[10px] font-medium">
+                            IMG
+                          </div>
+                        )}
+                      </div>
+                    )
+
+                    return (
+                      <tr key={item.id} className="hover:bg-stone-50/50 transition-colors">
+                        <td className="px-6 py-4">
+                          {href ? (
+                            <Link href={href} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 group">
+                              {thumbnail}
+                              <span className="font-medium text-stone-900 group-hover:text-orange-600 transition-colors">
+                                {item.product_name}
+                              </span>
+                            </Link>
+                          ) : (
+                            <div className="flex items-center gap-3">
+                              {thumbnail}
+                              <div>
+                                <span className="font-medium text-stone-900">{item.product_name}</span>
+                                <span className="block text-[11px] text-stone-400 font-medium">
+                                  {product ? 'Inactive — not viewable on site' : 'Product no longer available'}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-stone-600">{item.variant_name}</td>
+                        <td className="px-6 py-4 text-stone-400 text-xs">{item.product_id || '—'}</td>
+                        <td className="px-6 py-4 text-stone-600">₹{item.price_at_purchase}</td>
+                        <td className="px-6 py-4 text-stone-600">{item.quantity}</td>
+                        <td className="px-6 py-4 font-medium text-stone-900 text-right">₹{item.line_total}</td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

@@ -22,12 +22,12 @@ export async function submitReview(
 
     const productId = formData.get('product_id') as string
     const rating = parseInt(formData.get('rating') as string)
-    const reviewText = formData.get('review_text') as string
+    const comment = formData.get('comment') as string
 
     if (!productId) {
       return { error: 'Product ID is required.' }
     }
-    
+
     if (isNaN(rating) || rating < 1 || rating > 5) {
       return { error: 'Please select a valid rating between 1 and 5.' }
     }
@@ -35,10 +35,11 @@ export async function submitReview(
     const { error: insertError } = await supabase
       .from('reviews')
       .insert({
+        id: crypto.randomUUID(),
         product_id: productId,
         user_id: user.id,
         rating,
-        review_text: reviewText ? reviewText.trim() : null,
+        comment: comment ? comment.trim() : null,
         is_approved: false // Reviews must be approved by admin
       })
 

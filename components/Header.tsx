@@ -63,6 +63,28 @@ export default function Header() {
         }`}
       >
       <div className="max-w-wrap mx-auto px-5 md:px-8 flex items-center justify-between h-[72px] md:h-[84px]">
+        {/* Mobile hamburger — left side on mobile only */}
+        <button
+          aria-label={open ? "Close menu" : "Open menu"}
+          onClick={() => setOpen((v) => !v)}
+          className={`lg:hidden relative h-10 w-10 flex items-center justify-center text-[#211D19] shrink-0 transition-all ${
+            scrolled
+              ? "bg-transparent border-transparent shadow-none"
+              : "bg-white/95 border border-cream-line/60 rounded-full shadow-sm hover:bg-cream"
+          }`}
+        >
+          <span className="sr-only">Menu</span>
+          {open ? (
+            <svg className="w-[22px] h-[22px] text-[#211D19]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            <svg className="w-[22px] h-[22px] text-[#211D19]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          )}
+        </button>
+
         <a href="/" className="flex items-center gap-2.5 shrink-0">
           <Image
             src="/logo-dark.webp"
@@ -79,30 +101,61 @@ export default function Header() {
 
         <nav className="hidden lg:flex items-center gap-9">
           {navLinks.map((link) => {
-            if (link.label === "Collection") {
+            if (link.label === "Shop") {
               return (
                 <div key={link.href} className="relative group py-2">
-                  <button className="font-body text-[16px] font-semibold text-ink hover:text-emerald transition-colors flex items-center gap-1">
+                  <a
+                    href={link.href}
+                    className="font-body text-[16px] font-semibold text-ink hover:text-emerald transition-colors flex items-center gap-1"
+                  >
                     {link.label}
                     <svg className="w-4 h-4 text-ink/40 group-hover:text-emerald transition-transform group-hover:rotate-180 duration-200" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                     </svg>
-                  </button>
-                  
+                  </a>
+
                   {/* Dropdown Menu */}
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-48 bg-white border border-cream-line rounded-2xl shadow-lg opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 py-2 z-50">
-                    {dbData.categories.map((cat: any) => (
-                      <a
-                        key={cat.id}
-                        href={`/shop?category=${cat.id}`}
-                        className="block px-4 py-2 text-xs font-semibold text-ink/75 hover:bg-cream hover:text-emerald transition-colors"
-                      >
-                        {cat.name}
-                      </a>
-                    ))}
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-[540px] bg-white border border-cream-line rounded-2xl shadow-lg opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 p-6 z-50">
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-6">
+                      <div>
+                        <p className="px-1 mb-2 text-[11px] font-bold uppercase tracking-wider text-ink/40">Categories</p>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                          {dbData.categories.map((cat: any) => (
+                            <a
+                              key={cat.id}
+                              href={`/shop?category=${cat.id}`}
+                              className="block px-3 py-2 rounded-lg text-sm font-semibold text-ink/75 hover:bg-cream hover:text-emerald transition-colors"
+                            >
+                              {cat.name}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="px-1 mb-2 text-[11px] font-bold uppercase tracking-wider text-ink/40">Discover</p>
+                        <div className="space-y-2">
+                          <a
+                            href="/shop"
+                            className="block p-3 rounded-xl bg-cream/60 hover:bg-cream transition-colors"
+                          >
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-gold">New</span>
+                            <p className="font-display font-semibold text-ink text-sm mt-0.5">New Arrivals</p>
+                          </a>
+                          <a
+                            href="/shop?featured=true"
+                            className="block p-3 rounded-xl bg-cream/60 hover:bg-cream transition-colors"
+                          >
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-gold">Curated</span>
+                            <p className="font-display font-semibold text-ink text-sm mt-0.5">Featured Pieces</p>
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+
                     <a
                       href="/shop"
-                      className="block px-4 py-2 text-xs font-bold text-emerald hover:bg-cream border-t border-cream-line/50 mt-1 transition-colors"
+                      className="mt-5 block text-center px-4 py-2.5 rounded-xl bg-emerald text-cream text-sm font-bold hover:bg-emerald-deep transition-colors"
                     >
                       Shop All
                     </a>
@@ -201,44 +254,21 @@ export default function Header() {
           )}
         </div>
 
-        <div className="flex lg:hidden items-center gap-2">
-          {/* Mobile Cart Icon trigger */}
-          <button
-            onClick={() => setCartOpen(true)}
-            className={`relative h-10 w-10 flex items-center justify-center rounded-full bg-gold text-white shadow-md hover:bg-emerald transition-all shrink-0`}
-            title="Shopping Cart"
-          >
-            <svg className="w-[20px] h-[20px]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-            </svg>
-            {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald text-cream text-[9px] font-bold rounded-full flex items-center justify-center shadow-sm">
-                {cartCount}
-              </span>
-            )}
-          </button>
-
-          <button
-            aria-label={open ? "Close menu" : "Open menu"}
-            onClick={() => setOpen((v) => !v)}
-            className={`relative h-10 w-10 flex items-center justify-center text-[#211D19] shrink-0 transition-all ${
-              scrolled
-                ? "bg-transparent border-transparent shadow-none"
-                : "bg-white/95 border border-cream-line/60 rounded-full shadow-sm hover:bg-cream"
-            }`}
-          >
-            <span className="sr-only">Menu</span>
-            {open ? (
-              <svg className="w-5.5 h-5.5 text-[#211D19]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            ) : (
-              <svg className="w-5.5 h-5.5 text-[#211D19]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            )}
-          </button>
-        </div>
+        {/* Mobile cart — right side on mobile only */}
+        <button
+          onClick={() => setCartOpen(true)}
+          className="lg:hidden relative h-10 w-10 flex items-center justify-center rounded-full bg-gold text-white shadow-md hover:bg-emerald transition-all shrink-0"
+          title="Shopping Cart"
+        >
+          <svg className="w-[20px] h-[20px]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+          </svg>
+          {cartCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald text-cream text-[9px] font-bold rounded-full flex items-center justify-center shadow-sm">
+              {cartCount}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Mobile menu panel */}
@@ -249,7 +279,7 @@ export default function Header() {
       >
         <nav className="flex flex-col px-6 pt-8 gap-1">
           {navLinks.map((link, i) => {
-            if (link.label === "Collection") {
+            if (link.label === "Shop") {
               return (
                 <div key={link.href} className="border-b border-cream-line py-3.5">
                   <button
@@ -261,26 +291,44 @@ export default function Header() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
-                  
+
                   {mobileCollectionOpen && (
-                    <div className="pl-4 mt-3 space-y-3.5 animate-fade-in flex flex-col">
-                      {dbData.categories.map((cat: any) => (
+                    <div className="pl-4 mt-3 space-y-4 animate-fade-in flex flex-col">
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                        {dbData.categories.map((cat: any) => (
+                          <a
+                            key={cat.id}
+                            href={`/shop?category=${cat.id}`}
+                            onClick={() => setOpen(false)}
+                            className="text-base font-semibold text-ink/75 hover:text-emerald"
+                          >
+                            {cat.name}
+                          </a>
+                        ))}
+                      </div>
+                      <div className="flex flex-col gap-3 pt-3 border-t border-cream-line/60">
                         <a
-                          key={cat.id}
-                          href={`/shop?category=${cat.id}`}
+                          href="/shop"
                           onClick={() => setOpen(false)}
-                          className="text-lg font-semibold text-ink/75 hover:text-emerald"
+                          className="text-lg font-semibold text-ink/85 hover:text-emerald"
                         >
-                          {cat.name}
+                          New Arrivals
                         </a>
-                      ))}
-                      <a
-                        href="/shop"
-                        onClick={() => setOpen(false)}
-                        className="text-lg font-bold text-emerald"
-                      >
-                        Shop All
-                      </a>
+                        <a
+                          href="/shop?featured=true"
+                          onClick={() => setOpen(false)}
+                          className="text-lg font-semibold text-ink/85 hover:text-emerald"
+                        >
+                          Featured Pieces
+                        </a>
+                        <a
+                          href="/shop"
+                          onClick={() => setOpen(false)}
+                          className="text-lg font-bold text-emerald"
+                        >
+                          Shop All
+                        </a>
+                      </div>
                     </div>
                   )}
                 </div>
