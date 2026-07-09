@@ -1,15 +1,17 @@
-'use client'
+"use client"
 
 import React, { useState, useEffect, useTransition } from 'react'
 import { useCart } from '@/context/CartContext'
 import { useToast } from '@/context/ToastContext'
 import { validateCoupon } from '@/actions/admin/coupons'
 import { processCheckout, verifyRazorpayPayment } from '@/actions/checkout'
+import { sendEmailOtp, verifyEmailOtp } from '@/actions/auth'
 import { SITE } from '@/lib/data'
-import { Truck, Tag, CreditCard, ShoppingBag, ShieldCheck, CheckCircle2, Lock, Eye, EyeOff, Plus, Minus, X } from 'lucide-react'
+import { Truck, Tag, CreditCard, ShoppingBag, ShieldCheck, CheckCircle2, Lock, Eye, EyeOff, Plus, Minus, X, Loader2 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import Script from 'next/script'
+import { createClient } from '@/lib/supabase/client'
 
 type ShippingSettings = {
   flat_rate: number
@@ -26,6 +28,7 @@ export default function CheckoutForm({ shipping, isLoggedIn }: { shipping: Shipp
   // Shipping Address Form State
   const [profile, setProfile] = useState({
     fullName: '',
+    email: '',
     phone: '',
     alternatePhone: '',
     street: '',
@@ -34,9 +37,50 @@ export default function CheckoutForm({ shipping, isLoggedIn }: { shipping: Shipp
     zipCode: '',
   })
 
-  // Inline account creation (only shown for guests)
-  const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
+  // OTP States for Guest Checkout
+  const [otpSent, setOtpSent] = useState(false)
+  const [otpCode, setOtpCode] = useState('')
+  const [otpPending, setOtpPending] = useState(false)
+  const [resendTimer, setResendTimer] = useState(60)
+  const [otpError, setOtpError] = useState('')
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout
+    if (otpSent && resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1)
+      }, 1000)
+    }
+    return () => clearInterval(interval)
+  }, [otpSent, resendTimer])
+
+  useEffect(() => {
+    if (otpSent) {
+      setResendTimer(60)
+    }
+  }, [otpSent])
+
+  // Temporarily lower header z-index and freeze scrolling when OTP modal is open
+  useEffect(() => {
+    const header = document.querySelector('header')
+    if (otpSent && !isLoggedIn) {
+      if (header) {
+        header.style.zIndex = '0'
+      }
+      document.body.style.overflow = 'hidden'
+    } else {
+      if (header) {
+        header.style.zIndex = ''
+      }
+      document.body.style.overflow = ''
+    }
+    return () => {
+      if (header) {
+        header.style.zIndex = ''
+      }
+      document.body.style.overflow = ''
+    }
+  }, [otpSent, isLoggedIn])
 
   // Coupon State
   const [couponCode, setCouponCode] = useState('')
@@ -50,15 +94,16 @@ export default function CheckoutForm({ shipping, isLoggedIn }: { shipping: Shipp
   // Success Modal State
   const [placedOrder, setPlacedOrder] = useState<any>(null)
 
-  // Prefill from localStorage on mount
+  // Prefill from localStorage on mount (Only if logged in)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && isLoggedIn) {
       const savedData = localStorage.getItem('gulshan-customer-profile')
       if (savedData) {
         try {
           const parsed = JSON.parse(savedData)
           setProfile({
             fullName: parsed.fullName || '',
+            email: parsed.email || '',
             phone: parsed.phone || '',
             alternatePhone: parsed.alternatePhone || '',
             street: parsed.street || '',
@@ -71,7 +116,44 @@ export default function CheckoutForm({ shipping, isLoggedIn }: { shipping: Shipp
         }
       }
     }
-  }, [])
+  }, [isLoggedIn])
+
+  // Load user profile and default address from database if logged in
+  useEffect(() => {
+    if (isLoggedIn) {
+      const supabase = createClient()
+      if (supabase) {
+        supabase.auth.getUser().then(async ({ data }) => {
+          if (data?.user) {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', data.user.id)
+              .single()
+              
+            const { data: addressData } = await supabase
+              .from('addresses')
+              .select('*')
+              .eq('user_id', data.user.id)
+              .order('is_default', { ascending: false })
+              .limit(1)
+              .maybeSingle()
+
+            setProfile({
+              fullName: profileData?.full_name || '',
+              email: data.user.email || '',
+              phone: addressData?.phone || profileData?.phone || '',
+              alternatePhone: addressData?.alternate_phone || '',
+              street: addressData?.address_line_1 || '',
+              city: addressData?.city || '',
+              state: addressData?.state || '',
+              zipCode: addressData?.postal_code || '',
+            })
+          }
+        }).catch((err) => console.error('Failed to load profile in checkout:', err))
+      }
+    }
+  }, [isLoggedIn])
 
   // Calculate checkout details
   const subtotal = cartTotal
@@ -159,6 +241,34 @@ export default function CheckoutForm({ shipping, isLoggedIn }: { shipping: Shipp
     rzp1.open();
   }
 
+  // Execute checkout and place order
+  const executeOrderPlacement = async () => {
+    const addressString = `${profile.street}, ${profile.city}, ${profile.state} - ${profile.zipCode}`
+    const method = paymentMethod === 'Online Payment (Razorpay)' ? 'RAZORPAY' : 'COD'
+
+    // Save profile to localstorage on order place
+    localStorage.setItem('gulshan-customer-profile', JSON.stringify(profile))
+
+    const res = await processCheckout(profile, cart, method)
+
+    if (!res.success) {
+      showToast(res.error || 'Failed to place order.', 'error')
+    } else {
+      if (res.isRazorpay) {
+        handleRazorpayPayment(res, addressString)
+      } else {
+        setPlacedOrder({
+          order_number: res.order_number,
+          id: res.orderId,
+          total: grandTotal,
+          items: [...cart],
+          shippingAddress: addressString
+        })
+        clearCart()
+      }
+    }
+  }
+
   // Handle Checkout Submit
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -167,33 +277,57 @@ export default function CheckoutForm({ shipping, isLoggedIn }: { shipping: Shipp
       return
     }
 
-    if (!isLoggedIn && password.length < 6) {
-      showToast('Please set a password (at least 6 characters) to create your account.', 'error')
+    if (!profile.fullName || !profile.email || !profile.phone || !profile.street || !profile.city || !profile.state || !profile.zipCode) {
+      showToast('Please fill out all shipping details.', 'error')
       return
     }
 
-    startTransition(async () => {
-      const addressString = `${profile.street}, ${profile.city}, ${profile.state} - ${profile.zipCode}`
-      const method = paymentMethod === 'Online Payment (Razorpay)' ? 'RAZORPAY' : 'COD'
-
-      const res = await processCheckout(profile, cart, method, isLoggedIn ? undefined : password)
-
-      if (!res.success) {
-        showToast(res.error || 'Failed to place order.', 'error')
+    if (!isLoggedIn) {
+      if (!otpSent) {
+        setOtpPending(true)
+        startTransition(async () => {
+          const res = await sendEmailOtp(profile.email, 'REGISTER', profile.fullName)
+          setOtpPending(false)
+          if (res?.error) {
+            showToast(res.error, 'error')
+          } else {
+            setOtpSent(true)
+            showToast('Verification code sent to ' + profile.email, 'success')
+          }
+        })
+        return
       } else {
-        if (res.isRazorpay) {
-          handleRazorpayPayment(res, addressString)
-        } else {
-          setPlacedOrder({
-            order_number: res.order_number,
-            id: res.orderId,
-            total: grandTotal,
-            items: [...cart],
-            shippingAddress: addressString
-          })
-          clearCart()
+        if (!otpCode || otpCode.length !== 6) {
+          showToast('Please enter a valid 6-digit verification code.', 'error')
+          return
         }
+        setOtpPending(true)
+        startTransition(async () => {
+          const res = await verifyEmailOtp(profile.email, otpCode, 'NO_REDIRECT', profile.fullName, profile.phone)
+          if (res?.error) {
+            setOtpPending(false)
+            setOtpError(res.error)
+            showToast(res.error, 'error')
+          } else if (res?.success) {
+            try {
+              window.dispatchEvent(new Event('gulshan-login-status-change'))
+              await executeOrderPlacement()
+              setOtpSent(false)
+            } catch (e: any) {
+              showToast(e.message || 'Error processing checkout', 'error')
+            } finally {
+              setOtpPending(false)
+            }
+          } else {
+            setOtpPending(false)
+          }
+        })
+        return
       }
+    }
+
+    startTransition(async () => {
+      await executeOrderPlacement()
     })
   }
 
@@ -255,7 +389,8 @@ export default function CheckoutForm({ shipping, isLoggedIn }: { shipping: Shipp
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+    <>
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       {/* Left Column: Shipping Address & Payment Form */}
       <div className="lg:col-span-7 space-y-6">
@@ -277,6 +412,24 @@ export default function CheckoutForm({ shipping, isLoggedIn }: { shipping: Shipp
                 onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
                 placeholder="e.g. Sumaiya Khan"
                 className="w-full px-4 py-2.5 rounded-xl border border-cream-line bg-cream/20 text-ink focus:outline-none focus:ring-2 focus:ring-emerald/20 focus:border-emerald transition-all text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">
+                Email Address
+              </label>
+              <input
+                type="email"
+                required
+                disabled={isLoggedIn}
+                value={profile.email}
+                onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                placeholder="e.g. sumaiya@example.com"
+                className={`w-full px-4 py-2.5 rounded-xl border border-cream-line text-sm transition-all focus:outline-none ${
+                  isLoggedIn 
+                    ? 'bg-cream/10 text-ink/50 cursor-not-allowed' 
+                    : 'bg-cream/20 text-ink focus:ring-2 focus:ring-emerald/20 focus:border-emerald'
+                }`}
               />
             </div>
             <div>
@@ -378,40 +531,7 @@ export default function CheckoutForm({ shipping, isLoggedIn }: { shipping: Shipp
           </div>
         </div>
 
-        {!isLoggedIn && (
-          <div className="bg-white rounded-3xl p-6 md:p-8 border border-cream-line shadow-card space-y-4">
-            <h2 className="text-lg font-bold text-ink uppercase tracking-wider flex items-center gap-2">
-              <Lock className="w-5 h-5 text-gold" /> Create Your Account
-            </h2>
-            <p className="text-xs text-ink/50 -mt-2">
-              We'll set up an account with your phone number ({profile.phone || '—'}) so you can track this order. Just set a password below.
-            </p>
-            <div>
-              <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  minLength={6}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Set a password for your account"
-                  className="w-full px-4 py-2.5 pr-11 rounded-xl border border-cream-line bg-cream/20 text-ink focus:outline-none focus:ring-2 focus:ring-emerald/20 focus:border-emerald transition-all text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-ink/40 hover:text-ink/70 transition-colors"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+
 
         <div className="bg-white rounded-3xl p-6 md:p-8 border border-cream-line shadow-card space-y-6">
           <h2 className="text-lg font-bold text-ink uppercase tracking-wider flex items-center gap-2">
@@ -566,15 +686,17 @@ export default function CheckoutForm({ shipping, isLoggedIn }: { shipping: Shipp
 
           <button
             type="submit"
-            disabled={pending || cart.length === 0}
-            className="w-full py-4 px-4 bg-emerald text-cream font-body font-semibold rounded-full shadow-card hover:bg-emerald-deep transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
+            disabled={pending || otpPending}
+            className="w-full py-4 px-6 bg-ink text-cream font-body font-bold rounded-full shadow-card hover:bg-gold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            {pending ? (
-              <div className="w-5 h-5 border-2 border-cream/30 border-t-cream rounded-full animate-spin" />
+            {pending || otpPending ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
               <>
-                <ShieldCheck className="w-5 h-5" />
-                Place Secure Order — ₹{grandTotal.toLocaleString('en-IN')}
+                <ShoppingBag className="w-5 h-5" />
+                {isLoggedIn 
+                  ? `Place Order • ₹${grandTotal.toLocaleString('en-IN')}` 
+                  : (otpSent ? 'Confirm OTP & Place Order' : 'Verify Email & Place Order')}
               </>
             )}
           </button>
@@ -618,6 +740,124 @@ export default function CheckoutForm({ shipping, isLoggedIn }: { shipping: Shipp
           </div>
         </div>
       </div>
+
     </form>
+
+      {/* OTP Verification Modal */}
+      {!isLoggedIn && otpSent && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-ink/80 backdrop-blur-2xl animate-fade-in">
+          <div className="bg-cream-deep max-w-md w-full rounded-3xl p-6 sm:p-8 border border-gold/30 shadow-soft text-center space-y-6 relative overflow-y-auto max-h-[90vh] sm:max-h-none">
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={() => setOtpSent(false)}
+              className="absolute right-4 top-4 p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 border border-red-100/50 transition-all duration-300 shadow-sm"
+              aria-label="Close modal"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="w-14 h-14 bg-gold/10 text-gold rounded-full flex items-center justify-center mx-auto border border-gold/20 shadow-inner">
+              <Lock className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-heading text-2xl font-bold text-ink">Confirm Verification Code</h3>
+              <p className="text-sm text-ink/75 mt-2 font-body px-1">
+                We sent a 6-digit OTP code to <strong className="text-ink font-semibold">{profile.email}</strong>. Please enter it below to verify your account and complete your order.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  required
+                  maxLength={6}
+                  value={otpCode}
+                  onChange={(e) => {
+                    setOtpCode(e.target.value.replace(/\D/g, ''))
+                    setOtpError('')
+                  }}
+                  placeholder="123456"
+                  className="w-full px-4 py-3.5 rounded-xl border border-gold/30 bg-cream text-center tracking-[0.5em] font-heading font-bold text-2xl text-ink focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/10 transition-all shadow-inner"
+                />
+              </div>
+
+              {otpError && (
+                <div className="p-2.5 bg-red-50 text-red-600 rounded-xl text-xs border border-red-100/50 font-medium animate-pulse">
+                  {otpError}
+                </div>
+              )}
+
+              <div className="text-sm text-center font-body">
+                {resendTimer > 0 ? (
+                  <span className="text-ink/50 bg-cream/30 py-1 px-3 rounded-full border border-cream-line/30">
+                    Resend code in <strong className="text-gold font-bold">{resendTimer}s</strong>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setOtpPending(true)
+                      const res = await sendEmailOtp(profile.email, 'REGISTER', profile.fullName)
+                      setOtpPending(false)
+                      if (res?.error) {
+                        showToast(res.error, 'error')
+                      } else {
+                        setResendTimer(60)
+                        showToast('Verification code resent successfully.', 'success')
+                      }
+                    }}
+                    className="text-gold hover:text-gold-dark hover:underline font-semibold transition-colors duration-200"
+                  >
+                    Resend Verification Code
+                  </button>
+                )}
+              </div>
+
+              <div className="flex gap-2.5 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setOtpSent(false)}
+                  className="flex-1 py-2.5 px-3.5 sm:py-3 sm:px-4 bg-cream border border-cream-line text-ink rounded-xl font-semibold hover:bg-cream-deep transition-all duration-300 text-xs sm:text-sm shadow-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={otpPending || otpCode.length !== 6}
+                  onClick={() => {
+                    setOtpPending(true)
+                    startTransition(async () => {
+                      const res = await verifyEmailOtp(profile.email, otpCode, 'NO_REDIRECT', profile.fullName, profile.phone)
+                      if (res?.error) {
+                        setOtpPending(false)
+                        setOtpError(res.error)
+                        showToast(res.error, 'error')
+                      } else if (res?.success) {
+                        try {
+                          window.dispatchEvent(new Event('gulshan-login-status-change'))
+                          await executeOrderPlacement()
+                          setOtpSent(false)
+                        } catch (e: any) {
+                          showToast(e.message || 'Error processing checkout', 'error')
+                        } finally {
+                          setOtpPending(false)
+                        }
+                      } else {
+                        setOtpPending(false)
+                      }
+                    })
+                  }}
+                  className="flex-1 py-2.5 px-3.5 sm:py-3 sm:px-4 bg-ink hover:bg-gold text-cream hover:text-ink rounded-xl font-semibold transition-all duration-300 text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {otpPending ? <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> : 'Verify & Order'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

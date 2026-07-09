@@ -54,41 +54,101 @@ export function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+  const getCookie = (name: string) => {
+    if (typeof window === 'undefined') return null
+    const value = `; ${document.cookie}`
+    const parts = value.split(`; ${name}=`)
+    if (parts.length === 2) {
+      const val = parts.pop()?.split(';').shift()
+      return val ? decodeURIComponent(val) : null
+    }
+    return null
+  }
+
+  const getCustomAuth = (realAuth: any = null) => {
+    const getSessionData = () => {
+      const customSessionVal = getCookie('gulshan-user-session')
+      if (customSessionVal) {
+        try {
+          return JSON.parse(customSessionVal)
+        } catch (e) {}
+      }
+      return null
+    }
+
+    return {
+      getUser: async () => {
+        const session = getSessionData()
+        if (session) {
+          return { data: { user: { id: session.id, email: session.email, user_metadata: { full_name: session.full_name, role: session.role } } }, error: null }
+        }
+        const mockCookie = getCookie('mock-admin-logged-in') === 'true'
+        if (mockCookie) {
+          return { data: { user: { id: 'mock-admin-id', email: 'admin@gulshanmodest.com', user_metadata: { role: 'admin' } } }, error: null }
+        }
+        if (realAuth) return await realAuth.getUser()
+        return { data: { user: null }, error: null }
+      },
+      getSession: async () => {
+        const session = getSessionData()
+        if (session) {
+          return { data: { session: { user: { id: session.id, email: session.email, user_metadata: { full_name: session.full_name, role: session.role } } } }, error: null }
+        }
+        const mockCookie = getCookie('mock-admin-logged-in') === 'true'
+        if (mockCookie) {
+          return { data: { session: { user: { id: 'mock-admin-id', email: 'admin@gulshanmodest.com', user_metadata: { role: 'admin' } } } }, error: null }
+        }
+        if (realAuth) return await realAuth.getSession()
+        return { data: { session: null }, error: null }
+      },
+      signInWithPassword: async (credentials: any) => {
+        if (realAuth) return await realAuth.signInWithPassword(credentials)
+        if (credentials?.email?.includes('admin')) {
+          if (typeof window !== 'undefined') {
+            document.cookie = 'mock-admin-logged-in=true; path=/'
+          }
+          return { data: { user: { id: 'mock-admin-id', email: credentials.email } }, error: null }
+        }
+        return { data: null, error: { message: 'Mock signin only works for admin' } }
+      },
+      signOut: async () => {
+        if (typeof window !== 'undefined') {
+          document.cookie = 'gulshan-user-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+          document.cookie = 'mock-admin-logged-in=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+        }
+        if (realAuth) await realAuth.signOut()
+        return { error: null }
+      },
+      onAuthStateChange: (callback: any) => {
+        const session = getSessionData()
+        if (session) {
+          callback('SIGNED_IN', { user: { id: session.id, email: session.email } })
+        } else {
+          callback('SIGNED_OUT', null)
+        }
+        return { data: { subscription: { unsubscribe: () => {} } } }
+      }
+    }
+  }
+
   if (!url || !key || url.includes('placeholder') || url === '') {
     // Mock client for local development without Supabase
     return {
-      auth: {
-        getUser: async () => {
-          if (typeof window !== 'undefined' && document.cookie.includes('mock-admin-logged-in=true')) {
-            return { data: { user: { id: 'mock-admin-id', email: 'admin@gulshanmodest.com' } }, error: null }
-          }
-          return { data: { user: null }, error: null }
-        },
-        getSession: async () => {
-          if (typeof window !== 'undefined' && document.cookie.includes('mock-admin-logged-in=true')) {
-            return { data: { session: { user: { id: 'mock-admin-id', email: 'admin@gulshanmodest.com' } } }, error: null }
-          }
-          return { data: { session: null }, error: null }
-        },
-        signInWithPassword: async ({ email }) => {
-          if (email.includes('admin')) {
-            if (typeof window !== 'undefined') {
-              document.cookie = 'mock-admin-logged-in=true; path=/'
-            }
-            return { data: { user: { id: 'mock-admin-id', email } }, error: null }
-          }
-          return { data: null, error: { message: 'Invalid credentials. Use an email containing "admin" to log in (Mock Mode).' } }
-        },
-        signOut: async () => {
-          if (typeof window !== 'undefined') {
-            document.cookie = 'mock-admin-logged-in=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
-          }
-          return { error: null }
-        },
-      },
+      auth: getCustomAuth(),
       from: (table: string) => new MockQueryBuilder(table)
     } as any
   }
 
-  return createBrowserClient(url, key)
+  const client = createBrowserClient(url, key)
+  const originalAuth = client.auth
+
+  Object.defineProperty(client, 'auth', {
+    get() {
+      return getCustomAuth(originalAuth)
+    },
+    configurable: true,
+    enumerable: true
+  })
+
+  return client
 }

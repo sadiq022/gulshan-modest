@@ -166,41 +166,62 @@ export async function createClient() {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   const cookieStore = await cookies()
 
+  const customSessionVal = cookieStore.get('gulshan-user-session')?.value
+  let customSession: any = null
+  if (customSessionVal) {
+    try {
+      customSession = JSON.parse(customSessionVal)
+    } catch (e) {}
+  }
+
+  const getCustomAuth = (realAuth: any = null) => ({
+    getUser: async () => {
+      if (customSession) {
+        return { data: { user: { id: customSession.id, email: customSession.email, user_metadata: { full_name: customSession.full_name, role: customSession.role } } }, error: null }
+      }
+      const hasMockCookie = cookieStore.get('mock-admin-logged-in')?.value === 'true'
+      if (hasMockCookie) {
+        return { data: { user: { id: 'mock-admin-id', email: 'admin@gulshanmodest.com', user_metadata: { role: 'admin' } } }, error: null }
+      }
+      if (realAuth) return await realAuth.getUser()
+      return { data: { user: null }, error: null }
+    },
+    getSession: async () => {
+      if (customSession) {
+        return { data: { session: { user: { id: customSession.id, email: customSession.email, user_metadata: { full_name: customSession.full_name, role: customSession.role } } } }, error: null }
+      }
+      const hasMockCookie = cookieStore.get('mock-admin-logged-in')?.value === 'true'
+      if (hasMockCookie) {
+        return { data: { session: { user: { id: 'mock-admin-id', email: 'admin@gulshanmodest.com', user_metadata: { role: 'admin' } } } }, error: null }
+      }
+      if (realAuth) return await realAuth.getSession()
+      return { data: { session: null }, error: null }
+    },
+    signInWithPassword: async (credentials: any) => {
+      if (realAuth) return await realAuth.signInWithPassword(credentials)
+      if (credentials?.email?.includes('admin')) {
+        cookieStore.set('mock-admin-logged-in', 'true', { path: '/' })
+        return { data: { user: { id: 'mock-admin-id', email: credentials.email } }, error: null }
+      }
+      return { data: null, error: { message: 'Mock signin only works for admin' } }
+    },
+    signOut: async () => {
+      cookieStore.set('gulshan-user-session', '', { path: '/', expires: new Date(0) })
+      cookieStore.set('mock-admin-logged-in', '', { path: '/', expires: new Date(0) })
+      if (realAuth) await realAuth.signOut()
+      return { error: null }
+    }
+  })
+
   if (!url || !key || url.includes('placeholder') || url === '') {
     // Server-side mock client to avoid crash and support local mock session
     return {
-      auth: {
-        getUser: async () => {
-          const hasMockCookie = cookieStore.get('mock-admin-logged-in')?.value === 'true'
-          if (hasMockCookie) {
-            return { data: { user: { id: 'mock-admin-id', email: 'admin@gulshanmodest.com' } }, error: null }
-          }
-          return { data: { user: null }, error: null }
-        },
-        getSession: async () => {
-          const hasMockCookie = cookieStore.get('mock-admin-logged-in')?.value === 'true'
-          if (hasMockCookie) {
-            return { data: { session: { user: { id: 'mock-admin-id', email: 'admin@gulshanmodest.com' } } }, error: null }
-          }
-          return { data: { session: null }, error: null }
-        },
-        signInWithPassword: async ({ email }) => {
-          if (email.includes('admin')) {
-            cookieStore.set('mock-admin-logged-in', 'true', { path: '/' })
-            return { data: { user: { id: 'mock-admin-id', email } }, error: null }
-          }
-          return { data: null, error: { message: 'Invalid credentials. Use an email containing "admin" to log in (Mock Mode).' } }
-        },
-        signOut: async () => {
-          cookieStore.set('mock-admin-logged-in', '', { path: '/', expires: new Date(0) })
-          return { error: null }
-        }
-      },
+      auth: getCustomAuth(),
       from: (table: string) => new MockQueryBuilder(table)
     } as any
   }
 
-  return createServerClient(
+  const client = createServerClient(
     url,
     key,
     {
@@ -222,4 +243,15 @@ export async function createClient() {
       },
     }
   )
+
+  const originalAuth = client.auth
+  Object.defineProperty(client, 'auth', {
+    get() {
+      return getCustomAuth(originalAuth)
+    },
+    configurable: true,
+    enumerable: true
+  })
+
+  return client
 }

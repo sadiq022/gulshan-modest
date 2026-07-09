@@ -2,13 +2,14 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   const hasMockCookie = request.cookies.get('mock-admin-logged-in')?.value === 'true'
+  const hasCustomCookie = request.cookies.get('gulshan-user-session')?.value
   
   // Check if any supabase auth cookie exists (standard naming format is sb-<project-id>-auth-token)
   const hasSupabaseCookie = request.cookies.getAll().some(
     (c) => c.name.startsWith('sb-') && c.name.endsWith('-auth-token')
   )
 
-  const loggedIn = hasMockCookie || hasSupabaseCookie
+  const loggedIn = hasMockCookie || hasSupabaseCookie || !!hasCustomCookie
 
   // Protected paths
   // Note: /checkout is intentionally not gated here — it collects the

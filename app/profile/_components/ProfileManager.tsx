@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { User, Phone, MapPin, CheckCircle, Package } from 'lucide-react'
-import { updateAdminProfile } from '@/actions/admin/profile'
+import { User, Phone, MapPin, CheckCircle, Package, Mail } from 'lucide-react'
+import { updateCustomerFullProfile } from '@/actions/profile'
 import { useToast } from '@/context/ToastContext'
 
 type CustomerProfile = {
@@ -56,12 +56,7 @@ export default function ProfileManager({ adminProfile, orders = [] }: { adminPro
     e.preventDefault()
     
     if (adminProfile) {
-      const formData = new FormData()
-      formData.append('fullName', profile.fullName)
-      formData.append('email', adminProfile.email)
-      formData.append('phone', profile.phone)
-      
-      const res = await updateAdminProfile(formData)
+      const res = await updateCustomerFullProfile(profile)
       if (res.error) {
         showToast(res.error, 'error')
         return
@@ -106,6 +101,22 @@ export default function ProfileManager({ adminProfile, orders = [] }: { adminPro
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-cream-line bg-cream/20 text-ink focus:outline-none focus:ring-2 focus:ring-emerald/20 focus:border-emerald transition-all text-[15px]"
                 />
                 <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-ink/30" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">
+                Email Address
+              </label>
+              <div className="relative">
+                <input
+                  type="email"
+                  disabled
+                  value={adminProfile?.email || ''}
+                  placeholder="e.g. customer@example.com"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-cream-line bg-cream/10 text-ink/50 cursor-not-allowed focus:outline-none text-[15px]"
+                />
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-ink/30" />
               </div>
             </div>
 
@@ -228,7 +239,13 @@ export default function ProfileManager({ adminProfile, orders = [] }: { adminPro
                 <div>
                   <div className="font-bold text-ink">Order #{order.order_number}</div>
                   <div className="text-xs text-ink/60 mt-1">
-                    {new Date(order.created_at).toLocaleDateString()}
+                    {(() => {
+                      const d = new Date(order.created_at)
+                      const day = d.getUTCDate()
+                      const month = d.getUTCMonth() + 1
+                      const year = d.getUTCFullYear()
+                      return `${day}/${month}/${year}`
+                    })()}
                   </div>
                 </div>
                 <div className="text-right">

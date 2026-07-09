@@ -15,12 +15,31 @@ export default async function CustomerProfilePage() {
   let adminProfile = null
   let orders = []
   if (user) {
-    const { data } = await supabase
+    const { data: profile } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)
       .single()
-    adminProfile = data
+
+    const { data: address } = await supabase
+      .from('addresses')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('is_default', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (profile) {
+      adminProfile = {
+        ...profile,
+        phone: profile.phone || address?.phone || '',
+        alternatePhone: address?.alternate_phone || '',
+        street: address?.address_line_1 || '',
+        city: address?.city || '',
+        state: address?.state || '',
+        zipCode: address?.postal_code || '',
+      }
+    }
 
     const { data: userOrders } = await supabase
       .from('orders')
@@ -37,7 +56,7 @@ export default async function CustomerProfilePage() {
     <>
       <Header />
       <main className="min-h-screen bg-cream pt-28 pb-16 md:pt-36 md:pb-24">
-        <div className="max-w-xl mx-auto px-5">
+        <div className="max-w-3xl mx-auto px-5">
           <div className="text-center mb-8">
             <div className="eyebrow justify-center inline-flex items-center gap-2">
               <span className="h-px w-6 bg-gold" />
