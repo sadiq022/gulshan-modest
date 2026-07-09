@@ -6,7 +6,7 @@ export async function middleware(request: NextRequest) {
   
   // Check if any supabase auth cookie exists (standard naming format is sb-<project-id>-auth-token)
   const hasSupabaseCookie = request.cookies.getAll().some(
-    (c) => c.name.startsWith('sb-') && c.name.endsWith('-auth-token')
+    (c) => c.name.startsWith('sb-') && c.name.includes('-auth-token')
   )
 
   const loggedIn = hasMockCookie || hasSupabaseCookie || !!hasCustomCookie
