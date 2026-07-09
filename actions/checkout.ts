@@ -5,8 +5,6 @@ import { revalidatePath } from 'next/cache'
 import Razorpay from 'razorpay'
 import crypto from 'crypto'
 
-const FREE_SHIPPING_THRESHOLD = 500
-const SHIPPING_COST = 90
 
 // Initialize Razorpay
 // We wrap this in a try-catch or check to avoid crashing if keys are missing
@@ -65,8 +63,30 @@ export async function createOrder(addressId: string, paymentMethod: string, cart
     })
   }
 
-  const shipping_cost = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST
-  const total_amount = subtotal + shipping_cost
+  // Fetch shipping settings from DB
+  const { data: settingsData } = await supabase
+    .from('settings')
+    .select('shipping')
+    .single()
+
+  const shippingSettings = settingsData?.shipping || {
+    flat_rate: 99,
+    free_threshold: 1999,
+    cod_charge: 50,
+    online_discount: 0
+  }
+
+  const flatRate = Number(shippingSettings.flat_rate ?? 99)
+  const freeThreshold = Number(shippingSettings.free_threshold ?? 1999)
+  const codCharge = Number(shippingSettings.cod_charge ?? 50)
+  const onlineDiscountPercent = Number(shippingSettings.online_discount ?? 0)
+
+  const shipping_cost = subtotal >= freeThreshold ? 0 : flatRate
+  const cod_cost = paymentMethod === 'COD' ? codCharge : 0
+  const online_discount_amount = paymentMethod === 'RAZORPAY'
+    ? Math.round((subtotal * onlineDiscountPercent) / 100)
+    : 0
+  const total_amount = subtotal + shipping_cost + cod_cost - online_discount_amount
 
   // Generate order number
   const order_number = `AM-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`

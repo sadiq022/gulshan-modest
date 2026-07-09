@@ -9,10 +9,16 @@ import Link from 'next/link'
 type CartDrawerProps = {
   isOpen: boolean
   onClose: () => void
+  shipping?: any
 }
 
-export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
+export default function CartDrawer({ isOpen, onClose, shipping }: CartDrawerProps) {
   const { cart, removeFromCart, updateQuantity, cartTotal, cartCount } = useCart()
+  
+  const flatRate = shipping?.flat_rate ?? 99
+  const freeThreshold = shipping?.free_threshold ?? 1999
+  const codCharge = shipping?.cod_charge ?? 49
+  const onlineDiscount = shipping?.online_discount ?? 5
 
   if (!isOpen) return null
 
@@ -126,8 +132,10 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                   ₹{cartTotal.toLocaleString('en-IN')}
                 </span>
               </div>
-              <p className="text-[11px] text-ink/40">
-                Shipping and taxes calculated at checkout. Shipping is flat ₹99 or free above ₹1,999.
+              <p className="text-[11px] text-ink/40 leading-relaxed">
+                Shipping is ₹{flatRate} or FREE above ₹{freeThreshold.toLocaleString('en-IN')}. 
+                {codCharge > 0 && ` COD charge: ₹${codCharge}.`}
+                {onlineDiscount > 0 && ` Get ${onlineDiscount}% OFF on Online Payments.`}
               </p>
               <div className="grid grid-cols-1 gap-2">
                 <Link

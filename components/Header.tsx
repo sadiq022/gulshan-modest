@@ -7,8 +7,9 @@ import { createClient } from "@/lib/supabase/client";
 import { useCart } from "@/context/CartContext";
 import CartDrawer from "./CartDrawer";
 import dbData from "@/lib/db.json";
-import { Search } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Search, Truck, Banknote, CreditCard } from "lucide-react";
+import { useRouter, usePathname } from "next/navigation";
+import { getShippingSettings } from "@/actions/admin/shipping";
 
 export default function Header() {
   const [scrolled, setScrolled] = useState(false);
@@ -20,6 +21,14 @@ export default function Header() {
   const isAdmin = user && (user.email === 'admin@gulshanmodest.com' || user.user_metadata?.role === 'admin');
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
+  const pathname = usePathname();
+  const [shipping, setShipping] = useState<any>(null);
+
+  useEffect(() => {
+    getShippingSettings()
+      .then((data) => setShipping(data))
+      .catch((err) => console.error("Error loading header shipping settings:", err));
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +71,23 @@ export default function Header() {
               : "bg-transparent"
         }`}
       >
+        {pathname === "/" && (
+          <div className="w-full bg-[#1E3B2E] text-cream text-[9px] sm:text-xs py-2 px-3 flex flex-row items-center justify-center gap-1.5 sm:gap-6 border-b border-cream-line/10 shrink-0 text-center font-medium font-body whitespace-nowrap overflow-hidden">
+            <span className="flex items-center gap-1"><Truck className="w-3 h-3 sm:w-4 sm:h-4 text-gold" /> Free Shipping above ₹{shipping?.free_threshold ?? '1,999'}</span>
+            <span className="text-white/20">|</span>
+            <span className="flex items-center gap-1">
+              <Banknote className="w-3 h-3 sm:w-4 sm:h-4 text-gold" /> 
+              <span className="inline sm:hidden">COD: ₹{shipping?.cod_charge ?? '49'}</span>
+              <span className="hidden sm:inline">COD Charge: ₹{shipping?.cod_charge ?? '49'}</span>
+            </span>
+            <span className="text-white/20">|</span>
+            <span className="flex items-center gap-1">
+              <CreditCard className="w-3 h-3 sm:w-4 sm:h-4 text-gold" /> 
+              <span className="inline sm:hidden">{shipping?.online_discount ?? '5'}% Off Online</span>
+              <span className="hidden sm:inline">{shipping?.online_discount ?? '5'}% Off on Online Payments</span>
+            </span>
+          </div>
+        )}
       <div className="max-w-wrap mx-auto px-5 md:px-8 flex items-center justify-between h-[72px] md:h-[84px]">
         {/* Mobile hamburger — left side on mobile only */}
         <button
@@ -404,7 +430,7 @@ export default function Header() {
         </nav>
       </div>
       </header>
-      <CartDrawer isOpen={cartOpen} onClose={() => setCartOpen(false)} />
+      <CartDrawer isOpen={cartOpen} onClose={() => setCartOpen(false)} shipping={shipping} />
     </>
   );
 }

@@ -14,6 +14,8 @@ import Script from 'next/script'
 type ShippingSettings = {
   flat_rate: number
   free_threshold: number
+  cod_charge?: number
+  online_discount?: number
 }
 
 export default function CheckoutForm({ shipping, isLoggedIn }: { shipping: ShippingSettings, isLoggedIn: boolean }) {
@@ -74,6 +76,7 @@ export default function CheckoutForm({ shipping, isLoggedIn }: { shipping: Shipp
   // Calculate checkout details
   const subtotal = cartTotal
   const shippingFee = subtotal >= (shipping.free_threshold ?? 1999) ? 0 : (shipping.flat_rate ?? 99)
+  const codFee = paymentMethod === 'Cash on Delivery' ? (shipping.cod_charge ?? 50) : 0
   
   let discount = 0
   if (activeCoupon) {
@@ -84,7 +87,12 @@ export default function CheckoutForm({ shipping, isLoggedIn }: { shipping: Shipp
     }
   }
 
-  const grandTotal = Math.max(0, subtotal + shippingFee - discount)
+  const onlineDiscountPercent = shipping.online_discount ?? 0
+  const onlineDiscountAmount = paymentMethod === 'Online Payment (Razorpay)'
+    ? Math.round((subtotal * onlineDiscountPercent) / 100)
+    : 0
+
+  const grandTotal = Math.max(0, subtotal + shippingFee + codFee - discount - onlineDiscountAmount)
 
   // Handle Coupon Apply
   const handleApplyCoupon = async () => {
@@ -423,8 +431,8 @@ export default function CheckoutForm({ shipping, isLoggedIn }: { shipping: Shipp
                 onChange={() => setPaymentMethod('Cash on Delivery')}
                 className="sr-only"
               />
-              <span className="font-bold text-ink text-sm">Cash on Delivery</span>
-              <span className="text-xs text-ink/50 mt-1">Pay flat shipping & product value at your doorstep.</span>
+              <span className="font-bold text-ink text-sm">Cash on Delivery (+₹{shipping.cod_charge ?? 50})</span>
+              <span className="text-xs text-ink/50 mt-1">Pay COD charge & product value at your doorstep.</span>
             </label>
 
             <label className={`flex flex-col p-4 rounded-2xl border-2 cursor-pointer transition-all ${
@@ -439,7 +447,9 @@ export default function CheckoutForm({ shipping, isLoggedIn }: { shipping: Shipp
                 onChange={() => setPaymentMethod('Online Payment (Razorpay)')}
                 className="sr-only"
               />
-              <span className="font-bold text-ink text-sm">Online Payment</span>
+              <span className="font-bold text-ink text-sm">
+                Online Payment {shipping.online_discount ? `(${shipping.online_discount}% Off)` : ''}
+              </span>
               <span className="text-xs text-ink/50 mt-1">Pay securely via UPI, Cards, or Netbanking.</span>
             </label>
           </div>
@@ -530,6 +540,18 @@ export default function CheckoutForm({ shipping, isLoggedIn }: { shipping: Shipp
                 {shippingFee === 0 ? <span className="text-emerald font-semibold uppercase">Free</span> : `₹${shippingFee}`}
               </span>
             </div>
+            {paymentMethod === 'Cash on Delivery' && (
+              <div className="flex justify-between text-xs">
+                <span className="text-ink/60">COD Charge</span>
+                <span className="font-bold text-ink">₹{codFee}</span>
+              </div>
+            )}
+            {onlineDiscountAmount > 0 && (
+              <div className="flex justify-between text-xs text-emerald font-semibold">
+                <span>Online Payment Discount ({onlineDiscountPercent}%)</span>
+                <span>-₹{onlineDiscountAmount.toLocaleString('en-IN')}</span>
+              </div>
+            )}
             {discount > 0 && (
               <div className="flex justify-between text-xs text-emerald">
                 <span>Discount ({activeCoupon?.code})</span>
