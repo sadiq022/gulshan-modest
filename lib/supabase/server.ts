@@ -170,8 +170,10 @@ export async function createClient() {
   let customSession: any = null
   if (customSessionVal) {
     try {
-      customSession = JSON.parse(customSessionVal)
-    } catch (e) {}
+      // Next.js URL-encodes cookie values; decode before parsing
+      const decoded = decodeURIComponent(customSessionVal)
+      customSession = JSON.parse(decoded)
+    } catch (e) { }
   }
 
   const getCustomAuth = (realAuth: any = null) => ({
@@ -227,7 +229,8 @@ export async function createClient() {
     {
       cookies: {
         getAll() {
-          return cookieStore.getAll()
+          // Exclude our custom session cookie so Supabase SSR does not try to parse it
+          return cookieStore.getAll().filter(c => c.name !== 'gulshan-user-session')
         },
         setAll(cookiesToSet) {
           try {

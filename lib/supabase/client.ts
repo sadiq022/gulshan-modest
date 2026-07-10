@@ -71,7 +71,7 @@ export function createClient() {
       if (customSessionVal) {
         try {
           return JSON.parse(customSessionVal)
-        } catch (e) {}
+        } catch (e) { }
       }
       return null
     }
@@ -126,7 +126,7 @@ export function createClient() {
         } else {
           callback('SIGNED_OUT', null)
         }
-        return { data: { subscription: { unsubscribe: () => {} } } }
+        return { data: { subscription: { unsubscribe: () => { } } } }
       }
     }
   }

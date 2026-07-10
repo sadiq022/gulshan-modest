@@ -294,7 +294,7 @@ export async function verifyEmailOtp(
   if (!userExists) {
     try {
       const { data: userList } = await adminAuth.listUsers()
-      const userData = userList?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase())
+      const userData = (userList?.users as any[])?.find(u => u.email?.toLowerCase() === email.toLowerCase())
       if (userData) {
         userExists = true
       }
@@ -348,7 +348,7 @@ export async function verifyEmailOtp(
   if (!finalProfile) {
     try {
       const { data: userList } = await adminAuth.listUsers()
-      const userData = userList?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase())
+      const userData = (userList?.users as any[])?.find(u => u.email?.toLowerCase() === email.toLowerCase())
       if (userData) {
         const nameToUse = fullName || record.full_name || 'Customer'
         const { data: insertedProfile } = await supabase.from('profiles').insert({
