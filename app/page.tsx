@@ -2,6 +2,7 @@ import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import TrustMarquee from "@/components/TrustMarquee";
 import Story from "@/components/Story";
+import HomeBanner from "@/components/HomeBanner";
 import Categories from "@/components/Categories";
 import Products from "@/components/Products";
 import LuxeSalwarKameez from "@/components/LuxeSalwarKameez";
@@ -30,6 +31,23 @@ export default async function Home() {
     .from("categories")
     .select("*")
     .eq("is_active", true);
+
+  // Fetch home banner (only shown if the admin toggle is enabled)
+  const { data: bannerSettings } = await supabase
+    .from("settings")
+    .select("home_banner_enabled")
+    .single();
+
+  let homeBannerImages: { id: string; image_url: string; link_url: string | null }[] = [];
+  if (bannerSettings?.home_banner_enabled) {
+    const { data: bannerImages } = await supabase
+      .from("home_banner_images")
+      .select("id, image_url, link_url")
+      .eq("is_active", true)
+      .order("display_order", { ascending: true })
+      .order("created_at", { ascending: true });
+    homeBannerImages = bannerImages || [];
+  }
 
   // Fetch product counts per category, and color-group sizes for "N colors available" badges
   const { data: allProducts } = await supabase
@@ -108,6 +126,7 @@ export default async function Home() {
       <Header />
       <Hero slides={heroSlides || []} />
       <TrustMarquee />
+      <HomeBanner images={homeBannerImages} />
       <Categories categories={categories || []} />
       <Products products={formattedProducts} categories={categories || []} />
       <PakistaniEditBanner />
