@@ -100,10 +100,10 @@ export default function Hero({ slides = [] }: { slides?: Slide[] }) {
             </div>
 
             {/* Brand Typography */}
-            <span className="font-display font-semibold text-base md:text-lg tracking-[0.25em] text-gold uppercase">
+            <span className="hidden md:inline-block font-display font-semibold text-base md:text-lg tracking-[0.25em] text-gold uppercase">
               Gulshan Modest
             </span>
-            <div className="w-16 h-[1px] bg-gold/50 my-2" />
+            <div className="hidden md:block w-16 h-[1px] bg-gold/50 my-2" />
 
             <h1 className="mt-3 font-display font-bold leading-[1.1] text-[2.8rem] sm:text-5xl md:text-6xl text-emerald">
               Modesty. <br />
