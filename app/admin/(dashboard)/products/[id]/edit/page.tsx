@@ -82,6 +82,7 @@ export default async function EditProductPage({
         <ProductVariantsEditor
           productId={id}
           variants={variantsRes.data || []}
+          colorName={productRes.data.color_name}
         />
       </div>
 

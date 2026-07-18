@@ -20,7 +20,7 @@ type ShippingSettings = {
   online_discount?: number
 }
 
-export default function CheckoutForm({ shipping, isLoggedIn }: { shipping: ShippingSettings, isLoggedIn: boolean }) {
+export default function CheckoutForm({ shipping, isLoggedIn, hasCoupons = false }: { shipping: ShippingSettings, isLoggedIn: boolean, hasCoupons?: boolean }) {
   const { cart, cartTotal, clearCart, updateQuantity, removeFromCart } = useCart()
   const { showToast } = useToast()
   const [pending, startTransition] = useTransition()
@@ -703,42 +703,39 @@ export default function CheckoutForm({ shipping, isLoggedIn }: { shipping: Shipp
         </div>
 
         {/* Coupons Form */}
-        <div className="bg-white rounded-3xl p-6 border border-cream-line shadow-card space-y-4">
-          <h3 className="text-sm font-bold text-ink uppercase tracking-wider flex items-center gap-1.5">
-            <Tag className="w-4 h-4 text-gold" /> Have a Coupon?
-          </h3>
+        {hasCoupons && (
+          <div className="bg-white rounded-3xl p-6 border border-cream-line shadow-card space-y-4">
+            <h3 className="text-sm font-bold text-ink uppercase tracking-wider flex items-center gap-1.5">
+              <Tag className="w-4 h-4 text-gold" /> Have a Coupon?
+            </h3>
 
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={couponCode}
-              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  handleApplyCoupon()
-                }
-              }}
-              placeholder="e.g. EID50, WELCOME100"
-              className="flex-1 px-3.5 py-2 rounded-xl border border-cream-line bg-cream/20 text-ink focus:outline-none focus:ring-2 focus:ring-emerald/20 focus:border-emerald transition-all text-xs uppercase"
-            />
-            <button
-              type="button"
-              onClick={handleApplyCoupon}
-              className="px-4 py-2 bg-emerald hover:bg-emerald-deep text-cream text-xs font-bold rounded-xl transition-all"
-            >
-              Apply
-            </button>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleApplyCoupon()
+                  }
+                }}
+                placeholder="Enter coupon code"
+                className="flex-1 px-3.5 py-2 rounded-xl border border-cream-line bg-cream/20 text-ink focus:outline-none focus:ring-2 focus:ring-emerald/20 focus:border-emerald transition-all text-xs uppercase"
+              />
+              <button
+                type="button"
+                onClick={handleApplyCoupon}
+                className="px-4 py-2 bg-emerald hover:bg-emerald-deep text-cream text-xs font-bold rounded-xl transition-all"
+              >
+                Apply
+              </button>
+            </div>
+
+            {couponError && <p className="text-xs text-red-500">{couponError}</p>}
+            {couponSuccess && <p className="text-xs text-emerald font-semibold">{couponSuccess}</p>}
           </div>
-
-          {couponError && <p className="text-xs text-red-500">{couponError}</p>}
-          {couponSuccess && <p className="text-xs text-emerald font-semibold">{couponSuccess}</p>}
-
-          <div className="text-[11px] text-ink/40 border-t border-cream-line/50 pt-2 space-y-1">
-            <p><strong>EID50</strong> — 50% discount on orders above ₹999</p>
-            <p><strong>WELCOME100</strong> — Flat ₹100 discount on orders above ₹499</p>
-          </div>
-        </div>
+        )}
       </div>
 
     </form>

@@ -1,7 +1,6 @@
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
-import ProductDetailActions from './_components/ProductDetailActions'
-import ProductGallery from './_components/ProductGallery'
+import ProductViewSection from './_components/ProductViewSection'
 import ProductReviews from './_components/ProductReviews'
 import Products from '@/components/Products'
 import { notFound } from 'next/navigation'
@@ -18,7 +17,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     .from("products")
     .select(`
       id, name, slug, category_id, is_active, badge, rating, short_description, description, fabric, stitching, featured_image_url, color_group_id, color_name, color_hex,
-      product_images ( image_url ),
+      product_images ( image_url, color_name ),
       product_variants ( id, variant_name, price, original_price, stock_quantity ),
       product_information ( label, value, display_order ),
       product_faqs ( question, answer, display_order )
@@ -31,7 +30,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       .from("products")
       .select(`
         id, name, slug, category_id, is_active, badge, rating, short_description, description, fabric, stitching, featured_image_url, color_group_id, color_name, color_hex,
-        product_images ( image_url ),
+        product_images ( image_url, color_name ),
         product_variants ( id, variant_name, price, original_price, stock_quantity ),
         product_information ( label, value, display_order ),
         product_faqs ( question, answer, display_order )
@@ -53,11 +52,11 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const categoryName = category?.name || productData.category_id;
 
   // Compile image array
-  let images: string[] = []
+  let images: { image_url: string; color_name?: string | null }[] = []
   if (productData.product_images && productData.product_images.length > 0) {
-    images = productData.product_images.map((img: any) => img.image_url)
+    images = productData.product_images
   } else if (productData.featured_image_url) {
-    images = [productData.featured_image_url]
+    images = [{ image_url: productData.featured_image_url }]
   }
 
   // Compile information
@@ -167,90 +166,21 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             <span className="text-ink font-semibold truncate max-w-[200px]">{productData.name}</span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 items-start">
-            {/* Left: Product Image Gallery */}
-            <ProductGallery images={images} productName={productData.name} badge={productData.badge} />
+          <ProductViewSection
+            product={{
+              id: productData.id,
+              name: productData.name,
+              badge: productData.badge,
+              rating: productData.rating,
+              short_description: productData.short_description,
+            }}
+            images={images}
+            variants={variants}
+            information={information}
+            categoryName={categoryName}
+          />
 
-            {/* Right: Product Details & Purchase Form */}
-            <div className="space-y-8">
-              <div>
-                <span className="text-xs uppercase tracking-wider text-gold font-bold">
-                  {categoryName}
-                </span>
-                <h1 className="font-display font-bold text-3xl md:text-4xl lg:text-5xl text-ink mt-2 leading-tight">
-                  {productData.name}
-                </h1>
-                
-                {productData.rating && (
-                  <div className="mt-3 flex items-center gap-1.5 text-sm text-ink/60">
-                    <div className="flex text-gold">★★★★★</div>
-                    <span className="font-semibold text-ink">{productData.rating} ★</span>
-                    <span className="text-ink/30">|</span>
-                    <span>Verified</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Color Options */}
-              {colorOptions.length > 1 && (
-                <div>
-                  <p className="text-[13px] uppercase tracking-wider font-bold text-ink/70 mb-3">
-                    Color{productData.color_name ? ` — ${productData.color_name}` : ''}
-                    <span className="ml-1.5 font-semibold normal-case text-emerald">
-                      ({colorOptions.length} colors available)
-                    </span>
-                  </p>
-                  <div className="flex flex-wrap gap-3">
-                    {colorOptions.map((c) => (
-                      <Link
-                        key={c.id}
-                        href={`/shop/${c.id}`}
-                        title={c.color_name || c.name}
-                        className={`relative w-11 h-11 rounded-full border-2 overflow-hidden shrink-0 transition-all ${
-                          c.id === productData.id
-                            ? 'border-emerald scale-110 shadow-sm'
-                            : 'border-cream-line hover:border-emerald/50'
-                        }`}
-                        style={{ backgroundColor: c.color_hex || '#E6DAC4' }}
-                      >
-                        <span className="sr-only">{c.color_name || c.name}</span>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Purchase Actions client-side wrapper (includes dynamic price and Add to cart) */}
-              <ProductDetailActions 
-                product={{
-                  id: productData.id,
-                  name: productData.name,
-                  image_url: images[0] || "/image.png",
-                  category_name: categoryName,
-                  variants: variants
-                }}
-              />
-
-              {productData.short_description && (
-                <div className="font-body text-ink/80 text-lg leading-relaxed pt-2">
-                  <p>{productData.short_description}</p>
-                </div>
-              )}
-
-              {/* Dynamic Information Section */}
-              {information.length > 0 && (
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-cream-line/50">
-                  {information.map((info: any, idx: number) => (
-                    <div key={idx} className="p-4 bg-white rounded-2xl border border-cream-line shadow-sm">
-                      <p className="text-[11px] font-bold text-ink/50 uppercase tracking-wider">{info.label}</p>
-                      <p className="text-sm font-semibold text-emerald mt-1">{info.value}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Long Description & FAQs */}
-              <div className="space-y-6 pt-6 border-t border-cream-line/50">
+          <div className="space-y-6 pt-6 border-t border-cream-line/50">
                 {productData.description && (
                   <div>
                     <h3 className="font-display font-semibold text-xl text-ink mb-4">Product Details</h3>
@@ -281,10 +211,6 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                   </div>
                 )}
               </div>
-            </div>
-          </div>
-
-        </div>
 
         {/* Similar Products */}
         {similarProducts.length > 0 && (
@@ -297,6 +223,8 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             />
           </div>
         )}
+
+        </div>
 
         {/* Product Reviews */}
         <section className="mt-20 pt-10 border-t border-cream-line bg-cream">

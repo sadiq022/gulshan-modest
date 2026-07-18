@@ -90,6 +90,7 @@ export interface ProductImage {
   product_id: string
   image_url: string
   sort_order: number
+  color_name?: string | null
   created_at: string
 }
 

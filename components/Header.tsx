@@ -20,6 +20,7 @@ export default function Header() {
   const [user, setUser] = useState<any>(null);
   const isAdmin = user && (user.email === 'admin@gulshanmodest.com' || user.user_metadata?.role === 'admin');
   const [searchQuery, setSearchQuery] = useState("");
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
   const router = useRouter();
   const [shipping, setShipping] = useState<any>(null);
 
@@ -29,11 +30,18 @@ export default function Header() {
       .catch((err) => console.error("Error loading header shipping settings:", err));
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const currentSearch = params.get("search");
+    if (currentSearch) setSearchQuery(currentSearch);
+  }, []);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/shop?search=${encodeURIComponent(searchQuery.trim())}`);
       setOpen(false);
+      setShowMobileSearch(false);
     }
   };
 
@@ -101,7 +109,10 @@ export default function Header() {
           {/* Mobile hamburger — left side on mobile only */}
           <button
             aria-label={open ? "Close menu" : "Open menu"}
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => {
+              setOpen((v) => !v);
+              setShowMobileSearch(false);
+            }}
             className={`lg:hidden relative h-10 w-10 flex items-center justify-center text-[#211D19] shrink-0 transition-all ${scrolled
                 ? "bg-transparent border-transparent shadow-none"
                 : "bg-white/95 border border-cream-line/60 rounded-full shadow-sm hover:bg-cream"
@@ -211,7 +222,7 @@ export default function Header() {
           </nav>
 
           <div className="hidden lg:flex items-center gap-6">
-            <form onSubmit={handleSearch} className="relative hidden xl:block">
+            <form onSubmit={handleSearch} className="relative">
               <input
                 type="text"
                 placeholder="Search..."
@@ -289,22 +300,55 @@ export default function Header() {
             )}
           </div>
 
-          {/* Mobile cart — right side on mobile only */}
-          <button
-            onClick={() => setCartOpen(true)}
-            className="lg:hidden relative h-10 w-10 flex items-center justify-center rounded-full bg-gold text-white shadow-md hover:bg-emerald transition-all shrink-0"
-            title="Shopping Cart"
-          >
-            <svg className="w-[20px] h-[20px]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-            </svg>
-            {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald text-cream text-[9px] font-bold rounded-full flex items-center justify-center shadow-sm">
-                {cartCount}
-              </span>
-            )}
-          </button>
+          {/* Mobile search & cart — right side on mobile only */}
+          <div className="lg:hidden flex items-center gap-2">
+            <button
+              onClick={() => {
+                setShowMobileSearch((v) => !v);
+                setOpen(false);
+              }}
+              className={`relative h-10 w-10 flex items-center justify-center rounded-full text-ink hover:text-emerald hover:scale-105 transition-all shrink-0 ${
+                showMobileSearch ? "bg-emerald text-cream" : scrolled ? "bg-transparent" : "bg-white/95 border border-cream-line/60 shadow-sm"
+              }`}
+              title="Search Products"
+            >
+              <Search className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setCartOpen(true)}
+              className="relative h-10 w-10 flex items-center justify-center rounded-full bg-gold text-white shadow-md hover:bg-emerald transition-all shrink-0"
+              title="Shopping Cart"
+            >
+              <svg className="w-[20px] h-[20px]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald text-cream text-[9px] font-bold rounded-full flex items-center justify-center shadow-sm">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Search Bar Dropdown */}
+        {showMobileSearch && (
+          <div className="lg:hidden bg-cream-deep border-t border-cream-line px-5 py-3 shadow-md animate-fade-in">
+            <form onSubmit={handleSearch} className="relative">
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-white border border-[#e6e2db] rounded-full py-2.5 pl-4 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-gold transition-all"
+                autoFocus
+              />
+              <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-ink/50 hover:text-emerald transition-colors">
+                <Search className="w-4 h-4" />
+              </button>
+            </form>
+          </div>
+        )}
 
         {/* Mobile menu panel */}
         <div
@@ -312,6 +356,20 @@ export default function Header() {
             }`}
         >
           <nav className="flex flex-col px-6 pt-8 gap-1">
+            {/* Search Input for Mobile */}
+            <form onSubmit={handleSearch} className="relative mb-4">
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-white border border-[#e6e2db] rounded-full py-2.5 pl-4 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-gold transition-all"
+              />
+              <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-ink/50 hover:text-gold transition-colors">
+                <Search className="w-4 h-4" />
+              </button>
+            </form>
+
             {navLinks.map((link, i) => {
               if (link.label === "Shop") {
                 return (

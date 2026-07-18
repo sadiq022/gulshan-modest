@@ -75,7 +75,7 @@ export default async function Home() {
   const { data: products } = await supabase
     .from("products")
     .select(`
-      id, name, slug, category_id, is_featured, is_active, color_group_id,
+      id, name, slug, category_id, is_featured, is_active, color_group_id, color_name,
       product_images ( image_url ),
       product_variants ( price, original_price )
     `)
@@ -83,6 +83,18 @@ export default async function Home() {
     .eq("is_featured", true)
     .order("created_at", { ascending: false })
     .limit(10);
+
+  // Helper to parse colors list
+  const parseProductColors = (colorNameField: string | null) => {
+    if (!colorNameField) return []
+    try {
+      if (colorNameField.startsWith('[')) {
+        const parsed = JSON.parse(colorNameField) as { name: string; hex: string }[]
+        return parsed.map(c => ({ name: c.name.trim(), hex: c.hex || '#E6DAC4' })).filter(c => c.name)
+      }
+    } catch (e) {}
+    return colorNameField.split(',').map(c => ({ name: c.trim(), hex: '#E6DAC4' })).filter(c => c.name)
+  }
 
   // Format products for the frontend component
   const formattedProducts = (products || []).map((p: any) => ({
@@ -94,6 +106,7 @@ export default async function Home() {
     oldPrice: p.product_variants?.[0]?.original_price || p.oldPrice || undefined,
     badge: p.badge,
     rating: p.rating || 5,
+    colors: parseProductColors(p.color_name),
     colorCount: p.color_group_id ? colorGroupCounts[p.color_group_id] || 1 : 1,
   }));
 
@@ -101,7 +114,7 @@ export default async function Home() {
   const { data: salwarKameezProducts } = await supabase
     .from("products")
     .select(`
-      id, name, price, oldPrice, badge, rating, featured_image_url, color_group_id,
+      id, name, price, oldPrice, badge, rating, featured_image_url, color_group_id, color_name,
       product_images ( image_url ),
       product_variants ( price, original_price )
     `)
@@ -118,6 +131,7 @@ export default async function Home() {
     oldPrice: p.product_variants?.[0]?.original_price || p.oldPrice || undefined,
     badge: p.badge,
     rating: p.rating || 5,
+    colors: parseProductColors(p.color_name),
     colorCount: p.color_group_id ? colorGroupCounts[p.color_group_id] || 1 : 1,
   }));
 

@@ -28,12 +28,35 @@ export default function ProductForm({ product, categories, otherProducts = [] }:
   )
   const [pending, startTransition] = useTransition()
 
-  // If this product already belongs to a color group, preselect a sibling
-  // from that same group as the "group with" default.
-  const currentSibling = product?.color_group_id
-    ? otherProducts.find((p) => p.color_group_id === product.color_group_id)
-    : undefined
-  const [colorHex, setColorHex] = useState(product?.color_hex || '#1E3B2E')
+  // Parse initial colors from JSON or legacy format
+  const initialColors = (() => {
+    if (!product?.color_name) return []
+    try {
+      if (product.color_name.startsWith('[')) {
+        return JSON.parse(product.color_name) as { name: string; hex: string }[]
+      }
+    } catch (e) {}
+    // Fallback for legacy comma-separated values
+    return product.color_name.split(',').map(c => ({ name: c.trim(), hex: '#E6DAC4' })).filter(c => c.name)
+  })()
+
+  const [colorsList, setColorsList] = useState<{ name: string; hex: string }[]>(initialColors)
+  const [colorInputName, setColorInputName] = useState('')
+  const [colorInputHex, setColorInputHex] = useState('#1E3B2E')
+
+  const handleAddColor = () => {
+    const name = colorInputName.trim()
+    if (!name) return
+    if (colorsList.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+      return
+    }
+    setColorsList([...colorsList, { name, hex: colorInputHex }])
+    setColorInputName('')
+  }
+
+  const handleRemoveColor = (nameToRemove: string) => {
+    setColorsList(colorsList.filter(c => c.name !== nameToRemove))
+  }
 
   return (
     <form
@@ -294,87 +317,84 @@ export default function ProductForm({ product, categories, otherProducts = [] }:
               </label>
             </div>
           </div>
-
-          {/* Color Variant */}
+          {/* Colors Management */}
           <div className="bg-white rounded-xl border border-stone-200/80 p-6 space-y-5">
-            <h2 className="text-base font-semibold text-stone-900">Color Variant</h2>
+            <h2 className="text-base font-semibold text-stone-900">Product Colors</h2>
             <p className="text-xs text-stone-400 -mt-3">
-              Link this product to another color of the same design so shoppers
-              see them as color options on one product page.
+              Add the colors available for this product. 
+              <strong> Click "Update Product" to save the product and generate these tabs for image uploads below.</strong>
             </p>
 
-            <div>
-              <label
-                htmlFor="product-color-name"
-                className="block text-sm font-medium text-stone-700 mb-1.5"
-              >
-                Color Name
-              </label>
-              <input
-                id="product-color-name"
-                name="color_name"
-                type="text"
-                maxLength={60}
-                defaultValue={product?.color_name || ''}
-                placeholder="e.g. Emerald Green"
-                className="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-white text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-all duration-200"
-              />
-            </div>
+            <div className="space-y-4">
+              {/* Color List / Tags */}
+              {colorsList.length > 0 ? (
+                <div className="flex flex-wrap gap-2 p-3 bg-stone-50 rounded-xl border border-stone-200/60">
+                  {colorsList.map((c) => (
+                    <div 
+                      key={c.name}
+                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-stone-200 text-xs font-semibold text-stone-850 shadow-sm"
+                    >
+                      <span 
+                        className="w-3.5 h-3.5 rounded-full border border-black/10 shrink-0" 
+                        style={{ backgroundColor: c.hex }} 
+                      />
+                      <span>{c.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveColor(c.name)}
+                        className="text-stone-400 hover:text-red-500 transition-colors ml-1 font-bold text-sm"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-4 text-center rounded-xl border-2 border-dashed border-stone-200 bg-stone-50/50">
+                  <p className="text-xs text-stone-450">No colors added yet.</p>
+                </div>
+              )}
 
-            <div>
-              <label
-                htmlFor="product-color-hex"
-                className="block text-sm font-medium text-stone-700 mb-1.5"
-              >
-                Swatch Color
-              </label>
-              <div className="flex items-center gap-2.5">
-                <input
-                  id="product-color-hex"
-                  type="color"
-                  value={colorHex}
-                  onChange={(e) => setColorHex(e.target.value)}
-                  className="w-11 h-11 rounded-lg border border-stone-200 cursor-pointer shrink-0 p-0.5"
-                />
-                <input
-                  name="color_hex"
-                  type="text"
-                  value={colorHex}
-                  onChange={(e) => setColorHex(e.target.value)}
-                  maxLength={7}
-                  className="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-white text-stone-900 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-all duration-200"
-                />
+              {/* Add New Color Form */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    value={colorInputName}
+                    onChange={(e) => setColorInputName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        handleAddColor()
+                      }
+                    }}
+                    placeholder="Color name (e.g. Olive, Cream)"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-stone-200 bg-white text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500"
+                  />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="color"
+                    value={colorInputHex}
+                    onChange={(e) => setColorInputHex(e.target.value)}
+                    className="w-8 h-8 rounded-lg border border-stone-200 cursor-pointer shrink-0 p-0.5"
+                  />
+                  <span className="text-[10px] font-mono text-stone-500 uppercase">{colorInputHex}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddColor}
+                  className="px-3.5 py-2 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-xl transition-all"
+                >
+                  Add
+                </button>
               </div>
-            </div>
 
-            <div>
-              <label
-                htmlFor="product-group-with"
-                className="block text-sm font-medium text-stone-700 mb-1.5"
-              >
-                Group With
-              </label>
-              <select
-                id="product-group-with"
-                name="group_with"
-                defaultValue={currentSibling?.id || ''}
-                className="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-white text-stone-900 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-all duration-200"
-              >
-                <option value="">Standalone — no color group</option>
-                {otherProducts.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                    {p.color_name ? ` (${p.color_name})` : ''}
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs text-stone-400 mt-1.5">
-                Pick any product that's already this design in another color —
-                they'll all be linked as one color group automatically.
-              </p>
-            </div>
+              {/* Hidden field to submit JSON string to backend */}
+              <input type="hidden" name="color_name" value={JSON.stringify(colorsList)} />
           </div>
         </div>
+      </div>
       </div>
 
       {/* Actions */}

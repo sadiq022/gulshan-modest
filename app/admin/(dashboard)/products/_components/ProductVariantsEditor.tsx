@@ -28,13 +28,51 @@ const STANDARD_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
 export function ProductVariantsEditor({
   productId,
   variants,
+  colorName,
 }: {
   productId: string
   variants: Variant[]
+  colorName?: string | null
 }) {
   const [isPending, startTransition] = useTransition()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isAdding, setIsAdding] = useState(false)
+  const [activeTab, setActiveTab] = useState<string>('All')
+
+  // Derive colors
+  const productColors = (() => {
+    if (!colorName) return []
+    try {
+      if (colorName.startsWith('[')) {
+        const parsed = JSON.parse(colorName) as { name: string; hex: string }[]
+        return parsed.map(c => c.name.trim()).filter(Boolean)
+      }
+    } catch (e) {}
+    return colorName.split(',').map(c => c.trim()).filter(Boolean)
+  })()
+
+  // Automatically update active tab based on view state
+  useEffect(() => {
+    if (productColors.length > 0) {
+      if (isAdding) {
+        setActiveTab('General')
+      } else {
+        setActiveTab(productColors[0])
+      }
+    } else {
+      setActiveTab('All')
+    }
+  }, [isAdding, colorName])
+
+  // Filter variants for display based on active color tab
+  const displayedVariants = variants.filter(v => {
+    if (activeTab === 'All') return true
+    
+    const variantNameLower = v.variant_name.toLowerCase().trim()
+    
+    // Check if it matches the selected color tab
+    return variantNameLower.includes(activeTab.toLowerCase().trim())
+  })
 
   // Single Edit Form State
   const [formData, setFormData] = useState({
@@ -49,37 +87,73 @@ export function ProductVariantsEditor({
   const [bulkData, setBulkData] = useState<BulkVariantForm[]>([])
 
   const initializeBulkForm = () => {
-    const existingNames = variants.map(v => v.variant_name.toUpperCase())
-    const initialSizes = STANDARD_SIZES.filter(s => !existingNames.includes(s))
-    
-    // If all standard sizes exist, just provide one empty row
-    if (initialSizes.length === 0) {
-      setBulkData([{
-        id: crypto.randomUUID(),
-        variant_name: '',
-        price: '',
-        original_price: '',
-        stock_quantity: '0',
-        is_active: true
-      }])
-    } else {
-      setBulkData(initialSizes.map(size => ({
-        id: crypto.randomUUID(),
-        variant_name: size,
-        price: '',
-        original_price: '',
-        stock_quantity: '0',
-        is_active: true
-      })))
-    }
+    // Start bulk form with just standard sizes (acting as the General Template)
+    setBulkData(STANDARD_SIZES.map(size => ({
+      id: crypto.randomUUID(),
+      variant_name: size,
+      price: '',
+      original_price: '',
+      stock_quantity: '0',
+      is_active: true
+    })))
     setIsAdding(true)
     setEditingId(null)
+    setActiveTab(productColors.length > 0 ? 'General' : 'All')
+  }
+
+  const handleApplyToAllColors = () => {
+    // Get general template rows (rows that do not contain any of the color names)
+    const generalRows = bulkData.filter(row => {
+      const nameLower = row.variant_name.toLowerCase().trim()
+      return !productColors.some(color => 
+        nameLower.includes(color.toLowerCase().trim())
+      )
+    })
+
+    // Filter out template rows that are empty (no price filled)
+    const activeTemplates = generalRows.filter(r => r.price.trim() !== '')
+
+    if (activeTemplates.length === 0) {
+      alert("Please fill in at least one size with a price first.")
+      return
+    }
+
+    // Generate color-specific combinations
+    const newCombinations: BulkVariantForm[] = []
+    productColors.forEach(color => {
+      activeTemplates.forEach(tpl => {
+        newCombinations.push({
+          id: crypto.randomUUID(),
+          variant_name: `${color} - ${tpl.variant_name}`,
+          price: tpl.price,
+          original_price: tpl.original_price,
+          stock_quantity: tpl.stock_quantity,
+          is_active: tpl.is_active
+        })
+      })
+    })
+
+    // Update bulk data, keeping the general templates plus the new generated combinations
+    setBulkData(prev => {
+      // Remove any existing rows that start with color names to avoid duplicates
+      const filteredPrev = prev.filter(r => {
+        const nameLower = r.variant_name.toLowerCase().trim()
+        return !productColors.some(color => 
+          nameLower.startsWith(color.toLowerCase().trim())
+        )
+      })
+      return [...filteredPrev, ...newCombinations]
+    })
+
+    // Switch tab to first color to let them review
+    setActiveTab(productColors[0] || 'All')
   }
 
   const addCustomSizeRow = () => {
+    const defaultPrefix = activeTab !== 'All' && activeTab !== 'General' ? `${activeTab} - ` : ''
     setBulkData(prev => [...prev, {
       id: crypto.randomUUID(),
-      variant_name: '',
+      variant_name: defaultPrefix,
       price: '',
       original_price: '',
       stock_quantity: '0',
@@ -189,6 +263,46 @@ export function ProductVariantsEditor({
         )}
       </div>
 
+      {/* Color Filter Tabs */}
+      {productColors.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-gray-200 pb-3">
+          {isAdding && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('General')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                activeTab === 'General'
+                  ? 'bg-stone-900 text-white'
+                  : 'text-stone-600 hover:bg-stone-100'
+              }`}
+            >
+              General Template
+            </button>
+          )}
+          
+          {productColors.map((color) => {
+            const count = isAdding
+              ? bulkData.filter(v => v.variant_name.toLowerCase().includes(color.toLowerCase().trim())).length
+              : variants.filter(v => v.variant_name.toLowerCase().includes(color.toLowerCase().trim())).length
+            return (
+              <button
+                key={color}
+                type="button"
+                onClick={() => setActiveTab(color)}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  activeTab === color
+                    ? 'bg-stone-900 text-white'
+                    : 'text-stone-600 hover:bg-stone-100'
+                }`}
+              >
+                {color} ({count})
+              </button>
+            )
+          })}
+
+        </div>
+      )}
+
       {/* SINGLE EDIT FORM */}
       {editingId && (
         <form onSubmit={handleSingleSubmit} className="bg-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm">
@@ -292,6 +406,22 @@ export function ProductVariantsEditor({
             </button>
           </div>
 
+          {activeTab === 'General' && productColors.length > 0 && (
+            <div className="bg-indigo-50 border border-indigo-150 rounded-xl p-4 mb-4 flex items-center justify-between">
+              <div>
+                <h5 className="text-xs font-bold text-indigo-900">Apply to All Colors</h5>
+                <p className="text-[11px] text-indigo-700 mt-0.5">Fill in the sizes below once, then click Apply to automatically generate these for all colors ({productColors.join(', ')}).</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleApplyToAllColors}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+              >
+                ✨ Apply for All Colors
+              </button>
+            </div>
+          )}
+
           <div className="space-y-3">
             {/* Headers */}
             <div className="hidden md:grid grid-cols-12 gap-3 px-2">
@@ -304,7 +434,18 @@ export function ProductVariantsEditor({
             </div>
 
             {/* Rows */}
-            {bulkData.map((row) => (
+            {bulkData.filter(row => {
+              if (activeTab === 'General') {
+                // Template sizes that don't contain any of the color names
+                const nameLower = row.variant_name.toLowerCase().trim()
+                return !productColors.some(color => 
+                  nameLower.includes(color.toLowerCase().trim())
+                )
+              }
+              if (activeTab === 'All') return true
+              const nameLower = row.variant_name.toLowerCase().trim()
+              return nameLower.includes(activeTab.toLowerCase().trim())
+            }).map((row) => (
               <div key={row.id} className="grid grid-cols-1 md:grid-cols-12 gap-3 bg-white p-3 md:p-2 rounded-lg border border-gray-200 shadow-sm items-center">
                 <div className="md:col-span-3">
                   <label className="block text-xs font-medium text-gray-500 md:hidden mb-1">Size Name</label>
@@ -397,69 +538,71 @@ export function ProductVariantsEditor({
       )}
 
       {variants.length > 0 ? (
-        <div className="overflow-hidden bg-white shadow ring-1 ring-black ring-opacity-5 sm:rounded-xl">
-          <table className="min-w-full divide-y divide-gray-300">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">Size</th>
-                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Price</th>
-                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Stock</th>
-                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
-                <th className="relative py-3.5 pl-3 pr-4 sm:pr-6"><span className="sr-only">Actions</span></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
-              {variants.map((variant) => (
-                <tr key={variant.id} className={editingId === variant.id ? 'bg-indigo-50' : 'hover:bg-gray-50/50 transition-colors'}>
-                  <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-bold text-gray-900">
-                    {variant.variant_name}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                    <div className="flex flex-col">
-                      <span className="font-medium text-gray-900">₹{variant.price}</span>
-                      {variant.original_price && (
-                        <span className="text-xs text-gray-400 line-through">₹{variant.original_price}</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm font-medium text-gray-900">
-                    {variant.stock_quantity}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                    {variant.is_active ? (
-                      <span className="inline-flex items-center rounded-md bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700 ring-1 ring-inset ring-green-600/20">
-                        Active
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center rounded-md bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
-                        Inactive
-                      </span>
-                    )}
-                  </td>
-                  <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                    <div className="flex items-center justify-end gap-3">
-                      <button
-                        onClick={() => handleEdit(variant)}
-                        disabled={isPending}
-                        className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 p-1.5 rounded hover:bg-indigo-100 transition-colors"
-                        title="Edit Size"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(variant.id)}
-                        disabled={isPending}
-                        className="text-red-600 hover:text-red-900 bg-red-50 p-1.5 rounded hover:bg-red-100 transition-colors"
-                        title="Delete Size"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
+        <div className="space-y-4">
+          <div className="overflow-hidden bg-white shadow ring-1 ring-black ring-opacity-5 sm:rounded-xl">
+            <table className="min-w-full divide-y divide-gray-300">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">Size</th>
+                  <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Price</th>
+                  <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Stock</th>
+                  <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
+                  <th className="relative py-3.5 pl-3 pr-4 sm:pr-6"><span className="sr-only">Actions</span></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-white">
+                {displayedVariants.map((variant) => (
+                  <tr key={variant.id} className={editingId === variant.id ? 'bg-indigo-50' : 'hover:bg-gray-50/50 transition-colors'}>
+                    <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-bold text-gray-900">
+                      {variant.variant_name}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                      <div className="flex flex-col">
+                        <span className="font-medium text-gray-900">₹{variant.price}</span>
+                        {variant.original_price && (
+                          <span className="text-xs text-gray-400 line-through">₹{variant.original_price}</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm font-medium text-gray-900">
+                      {variant.stock_quantity}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                      {variant.is_active ? (
+                        <span className="inline-flex items-center rounded-md bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700 ring-1 ring-inset ring-green-600/20">
+                          Active
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-md bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
+                          Inactive
+                        </span>
+                      )}
+                    </td>
+                    <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                      <div className="flex items-center justify-end gap-3">
+                        <button
+                          onClick={() => handleEdit(variant)}
+                          disabled={isPending}
+                          className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 p-1.5 rounded hover:bg-indigo-100 transition-colors"
+                          title="Edit Size"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(variant.id)}
+                          disabled={isPending}
+                          className="text-red-600 hover:text-red-900 bg-red-50 p-1.5 rounded hover:bg-red-100 transition-colors"
+                          title="Delete Size"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : (
         <div className="text-center py-16 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl">

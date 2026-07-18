@@ -18,6 +18,7 @@ interface Product {
   price: number;
   oldPrice?: number;
   colorCount?: number;
+  colors?: { name: string; hex: string }[];
 }
 
 interface Category {
@@ -88,10 +89,28 @@ export default function Products({
                           {p.name}
                         </h3>
                       </Link>
-                      {p.colorCount && p.colorCount > 1 && (
-                        <p className="mt-1 text-[11px] font-semibold text-emerald">
-                          {p.colorCount} colors available
-                        </p>
+                      {p.colors && p.colors.length > 0 ? (
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                          {p.colors.slice(0, 5).map((colorObj) => (
+                            <span
+                              key={colorObj.name}
+                              title={colorObj.name}
+                              className="w-3.5 h-3.5 rounded-full border border-black/10 shrink-0 shadow-sm"
+                              style={{ backgroundColor: colorObj.hex }}
+                            />
+                          ))}
+                          {p.colors.length > 5 && (
+                            <span className="text-[10px] text-ink/50 font-medium">
+                              +{p.colors.length - 5}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        p.colorCount && p.colorCount > 1 && (
+                          <p className="mt-1 text-[11px] font-semibold text-emerald">
+                            {p.colorCount} colors available
+                          </p>
+                        )
                       )}
                     </div>
                   <div className="mt-2 flex items-center gap-2">

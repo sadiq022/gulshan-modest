@@ -23,7 +23,7 @@ type ProductItem = {
   variants: ProductVariant[]
 }
 
-export default function ProductDetailActions({ product }: { product: ProductItem }) {
+export default function ProductDetailActions({ product, selectedColor = null }: { product: ProductItem, selectedColor?: string | null }) {
   const { addToCart, updateQuantity, cart } = useCart()
   const { showToast } = useToast()
   const router = useRouter()
@@ -32,12 +32,50 @@ export default function ProductDetailActions({ product }: { product: ProductItem
     product.variants.length > 0 ? product.variants[0] : null
   )
 
+  // Filter variants based on selectedColor if they are named like "Color - Size" or "Color Size"
+  const filteredVariants = React.useMemo(() => {
+    if (!selectedColor) return product.variants
+
+    const colorLower = selectedColor.toLowerCase().trim()
+    const matching = product.variants.filter(v => 
+      v.variant_name.toLowerCase().includes(colorLower)
+    )
+
+    if (matching.length > 0) return matching
+    return product.variants
+  }, [product.variants, selectedColor])
+
+  // Automatically update selected variant when the filtered variants change (e.g., when switching colors)
+  React.useEffect(() => {
+    if (filteredVariants.length > 0) {
+      // If current selected variant is not in the filtered list, switch to the first matching one
+      if (!selectedVariant || !filteredVariants.some(v => v.id === selectedVariant.id)) {
+        const firstInStock = filteredVariants.find(v => v.stock_quantity > 0)
+        setSelectedVariant(firstInStock || filteredVariants[0])
+      }
+    } else {
+      setSelectedVariant(null)
+    }
+  }, [filteredVariants])
+
+  // Get clean display name for the variant button (e.g., "Black - M" -> "M")
+  const getDisplayName = (variantName: string) => {
+    if (!selectedColor) return variantName
+    const colorLower = selectedColor.toLowerCase().trim()
+    if (variantName.toLowerCase().includes(colorLower)) {
+      const regex = new RegExp(colorLower + '\\s*[-/|:\\s]*\\s*', 'i')
+      const clean = variantName.replace(regex, '').trim()
+      return clean || variantName
+    }
+    return variantName
+  }
+
   // Use the selected variant price, or fallback to 0 (which shouldn't happen)
   const currentPrice = selectedVariant ? selectedVariant.price : 0
   const currentOldPrice = selectedVariant ? selectedVariant.original_price : null
 
-  // Find if this exact item+variant is already in cart
-  const cartItemId = `${product.id}-${selectedVariant?.id || 'default'}`
+  // Find if this exact item+variant+color is already in cart
+  const cartItemId = `${product.id}-${selectedVariant?.id || 'default'}-${selectedColor || 'default'}`
   const cartItem = cart.find(item => item.cartItemId === cartItemId)
   const currentQty = cartItem ? cartItem.quantity : 0
 
@@ -59,8 +97,8 @@ export default function ProductDetailActions({ product }: { product: ProductItem
         price: currentPrice,
         image_url: product.image_url,
         category_name: product.category_name,
-        variant_id: selectedVariant?.id,
-        variant_name: selectedVariant?.variant_name
+        variant_id: `${selectedVariant?.id || 'default'}-${selectedColor || 'default'}`,
+        variant_name: `${getDisplayName(selectedVariant?.variant_name || '')}${selectedColor ? ` (${selectedColor})` : ''}`
       })
     }
     showToast(`${quantity} × ${product.name} added to cart successfully!`, "success")
@@ -89,7 +127,7 @@ export default function ProductDetailActions({ product }: { product: ProductItem
       </div>
 
       {/* Variant Selector */}
-      {product.variants.length > 0 && (
+      {filteredVariants.length > 0 && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <span className="text-[13px] uppercase tracking-wider font-bold text-ink/70">Select Size / Variant</span>
@@ -99,7 +137,7 @@ export default function ProductDetailActions({ product }: { product: ProductItem
           </div>
           
           <div className="flex flex-wrap gap-3">
-            {product.variants.map(variant => (
+            {filteredVariants.map(variant => (
               <button
                 key={variant.id}
                 onClick={() => setSelectedVariant(variant)}
@@ -110,7 +148,7 @@ export default function ProductDetailActions({ product }: { product: ProductItem
                     : "border-cream-line text-ink/80 hover:border-emerald/40 hover:bg-emerald/5 hover:text-emerald"
                 } ${variant.stock_quantity <= 0 ? "opacity-40 cursor-not-allowed bg-cream-deep text-ink/40 border-cream-line line-through" : ""}`}
               >
-                {variant.variant_name}
+                {getDisplayName(variant.variant_name)}
                 {selectedVariant?.id === variant.id && (
                   <div className="absolute top-0 right-0 w-3 h-3 bg-emerald rounded-bl-xl" />
                 )}

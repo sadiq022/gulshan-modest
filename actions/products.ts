@@ -63,8 +63,6 @@ export async function createProduct(
   const seoDescription = formData.get('seo_description') as string
   const badge = formData.get('badge') as string
   const colorName = formData.get('color_name') as string
-  const colorHex = formData.get('color_hex') as string
-  const groupWith = (formData.get('group_with') as string) || null
   const isActive = formData.get('is_active') === 'on'
   const isFeatured = formData.get('is_featured') === 'on'
 
@@ -74,7 +72,6 @@ export async function createProduct(
 
   const slug = slugify(name)
   const id = crypto.randomUUID()
-  const colorGroupId = await resolveColorGroupId(supabase, groupWith)
 
   const { data: product, error } = await supabase.from('products').insert({
     id,
@@ -89,8 +86,8 @@ export async function createProduct(
     seo_description: seoDescription || null,
     badge: badge || null,
     color_name: colorName || null,
-    color_hex: colorHex || null,
-    color_group_id: colorGroupId,
+    color_hex: null,
+    color_group_id: null,
     is_active: isActive,
     is_featured: isFeatured,
   }).select('id').single()
@@ -123,8 +120,6 @@ export async function updateProduct(
   const seoDescription = formData.get('seo_description') as string
   const badge = formData.get('badge') as string
   const colorName = formData.get('color_name') as string
-  const colorHex = formData.get('color_hex') as string
-  const groupWith = (formData.get('group_with') as string) || null
   const isActive = formData.get('is_active') === 'on'
   const isFeatured = formData.get('is_featured') === 'on'
 
@@ -133,7 +128,6 @@ export async function updateProduct(
   }
 
   const slug = slugify(name)
-  const colorGroupId = await resolveColorGroupId(supabase, groupWith)
 
   const { error } = await supabase
     .from('products')
@@ -149,8 +143,8 @@ export async function updateProduct(
       seo_description: seoDescription || null,
       badge: badge || null,
       color_name: colorName || null,
-      color_hex: colorHex || null,
-      color_group_id: colorGroupId,
+      color_hex: null,
+      color_group_id: null,
       is_active: isActive,
       is_featured: isFeatured,
     })
@@ -164,7 +158,8 @@ export async function updateProduct(
   }
 
   revalidatePath('/admin/products')
-  redirect('/admin/products')
+  revalidatePath(`/admin/products/${id}/edit`)
+  redirect(`/admin/products/${id}/edit`)
 }
 
 export async function deleteProduct(id: string): Promise<ActionResult> {
@@ -223,7 +218,8 @@ export async function saveProductInformation(
 
 export async function addProductImage(
   productId: string,
-  imageUrl: string
+  imageUrl: string,
+  colorName?: string | null
 ): Promise<ActionResult> {
   const supabase = await createClient()
 
@@ -242,6 +238,7 @@ export async function addProductImage(
     product_id: productId,
     image_url: imageUrl,
     sort_order: nextSort,
+    color_name: colorName || null,
   })
 
   if (error) {
@@ -336,6 +333,25 @@ export async function reorderProductImages(
       .update({ sort_order: i })
       .eq('id', orderedIds[i])
       .eq('product_id', productId)
+  }
+
+  revalidatePath(`/admin/products/${productId}/edit`)
+  return { success: true }
+}
+
+export async function updateProductImageColor(
+  imageId: string,
+  productId: string,
+  colorName: string
+): Promise<ActionResult> {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('product_images')
+    .update({ color_name: colorName.trim() || null })
+    .eq('id', imageId)
+
+  if (error) {
+    return { error: error.message }
   }
 
   revalidatePath(`/admin/products/${productId}/edit`)

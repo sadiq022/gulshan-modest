@@ -89,7 +89,7 @@ export default function Hero({ slides = [] }: { slides?: Slide[] }) {
           <div className="relative z-10 flex flex-col items-center text-center px-2 py-4">
             
             {/* Monogram Logo Icon (Black boundary / transparent bg) */}
-            <div className="relative w-24 h-24 md:w-28 md:h-28 -mt-6 md:mt-0 mb-4 mix-blend-multiply">
+            <div className="hidden md:block relative w-24 h-24 md:w-28 md:h-28 -mt-6 md:mt-0 mb-4 mix-blend-multiply">
               <Image
                 src="/logo-dark.webp"
                 alt="Gulshan Modest Logo"
